@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}Welcome, {{ current_user.name }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Statistics Cards -->
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-3">Total Patients</h6>
+                <h2 class="mb-3">{{ total_patients }}</h2>
+                <p class="text-muted mb-0">Active patients under your care</p>
+                <a href="{{ url_for('patients') }}" class="text-purple text-decoration-none d-flex align-items-center gap-2 mt-3">
+                    View all patients
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-3">Appointments</h6>
+                <h2 class="mb-3">{{ total_appointments }}</h2>
+                <p class="text-muted mb-0">Today's scheduled visits</p>
+                <p class="text-purple mb-0 mt-2">Next: {{ next_appointment }}</p>
+                <a href="#" class="text-purple text-decoration-none d-flex align-items-center gap-2 mt-3">
+                    View schedule
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-3">Care Plans</h6>
+                <h2 class="mb-3">{{ total_care_plans }}</h2>
+                <p class="text-muted mb-0">Active treatment plans</p>
+                <p class="text-purple mb-0 mt-2">{{ updates_needed }} updates needed</p>
+                <a href="{{ url_for('care_plans') }}" class="text-purple text-decoration-none d-flex align-items-center gap-2 mt-3">
+                    Manage plans
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card h-100">
+            <div class="card-body">
+                <h6 class="text-muted mb-3">Messages</h6>
+                <h2 class="mb-3">{{ total_messages }}</h2>
+                <p class="text-muted mb-0">Patient communications</p>
+                <p class="text-purple mb-0 mt-2">{{ unread_messages }} unread messages</p>
+                <a href="{{ url_for('messages') }}" class="text-purple text-decoration-none d-flex align-items-center gap-2 mt-3">
+                    View inbox
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Alerts -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="mb-0">Patient Alerts</h5>
+                    <a href="{{ url_for('patients') }}" class="btn btn-purple">View Patients</a>
+                </div>
+
+                <div class="alert alert-danger d-flex align-items-center gap-3 mb-3">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <div>
+                        <h6 class="mb-1">High Blood Pressure Alert</h6>
+                        <p class="mb-0">James Wilson - 150/95 mmHg (30 minutes ago)</p>
+                    </div>
+                    <a href="#" class="btn btn-purple ms-auto">View Patient</a>
+                </div>
+
+                <div class="alert alert-warning d-flex align-items-center gap-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        <h6 class="mb-1">Medication Adherence Warning</h6>
+                        <p class="mb-0">Emily Johnson - Missed 2 doses this week</p>
+                    </div>
+                    <a href="#" class="btn btn-purple ms-auto">View Patient</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNest - Activities</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fe;
+        }
+        .sidebar {
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .nav-link {
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+        }
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+            font-weight: 500;
+        }
+        .profile-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        .calendar-header {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+        }
+        .calendar-day {
+            background-color: white;
+            border-radius: 8px;
+            padding: 1rem;
+            min-height: 120px;
+            border: 1px solid #e5e7eb;
+        }
+        .calendar-day.today {
+            border: 2px solid #7c3aed;
+        }
+        .calendar-day.other-month {
+            background-color: #f8f9fe;
+            color: #9ca3af;
+        }
+        .day-number {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .activity-item {
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+        }
+        .activity-item:hover {
+            background-color: #f3f4f6;
+        }
+        .activity-appointment {
+            border-left: 3px solid #7c3aed;
+            background-color: #f5f3ff;
+        }
+        .activity-therapy {
+            border-left: 3px solid #059669;
+            background-color: #ecfdf5;
+        }
+        .activity-medication {
+            border-left: 3px solid #d97706;
+            background-color: #fffbeb;
+        }
+        .activity-exercise {
+            border-left: 3px solid #2563eb;
+            background-color: #eff6ff;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .status-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        .status-in_progress {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .status-completed {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+        .status-cancelled {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .activity-list {
+            max-height: calc(100vh - 400px);
+            overflow-y: auto;
+        }
+        .activity-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+        }
+        .activity-card:hover {
+            border-color: #7c3aed;
+        }
+        .activities-management .btn-group .btn {
+            border-color: #7c3aed;
+            color: #7c3aed;
+        }
+        .activities-management .btn-group .btn:hover,
+        .activities-management .btn-group .btn.active {
+            background-color: #7c3aed;
+            color: white;
+        }
+        .activities-container {
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 1rem;
+            background-color: #f8f9fe;
+            border-radius: 12px;
+        }
+        .activity-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        .activity-card:hover {
+            border-color: #7c3aed;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="py-4 px-4">
+            <h4 class="mb-0" style="color: #7c3aed;">CareNest</h4>
+            <p class="text-muted small">Healthcare Platform</p>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link" href="{{ url_for('patients') }}">
+                <i class="bi bi-people"></i> Patients
+            </a>
+            <a class="nav-link" href="{{ url_for('messages') }}">
+                <i class="bi bi-chat"></i> Messages
+            </a>
+            <a class="nav-link" href="{{ url_for('care_plans') }}">
+                <i class="bi bi-clipboard2-pulse"></i> Care Plans
+            </a>
+            <a class="nav-link" href="{{ url_for('goals') }}">
+                <i class="bi bi-trophy"></i> Goals
+            </a>
+            <a class="nav-link active" href="{{ url_for('activities') }}">
+                <i class="bi bi-calendar3"></i> Activities
+            </a>
+            <a class="nav-link" href="{{ url_for('analytics') }}">
+                <i class="bi bi-graph-up"></i> Analytics
+            </a>
+            <a class="nav-link" href="{{ url_for('notifications') }}">
+                <i class="bi bi-bell"></i> Notifications
+            </a>
+        </nav>
+
+        <div class="profile-section">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    {% if current_user.is_authenticated %}
+                        {{ current_user.name[0].upper() }}
+                    {% else %}
+                        G
+                    {% endif %}
+                </div>
+                <div>
+                    {% if current_user.is_authenticated %}
+                        <div class="fw-500">{{ current_user.name }}</div>
+                        <div class="text-muted small">{{ current_user.role.title() }}</div>
+                    {% else %}
+                        <div class="fw-500">Guest</div>
+                        <div class="text-muted small">Not logged in</div>
+                    {% endif %}
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-link text-muted ms-auto">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1">Activities & Appointments</h4>
+                <p class="text-muted mb-0">Schedule and track patient activities</p>
+            </div>
+            <button class="btn btn-primary" style="background-color: #7c3aed; border: none;">
+                <i class="bi bi-plus"></i> Schedule Activity
+            </button>
+        </div>
+
+        <!-- Calendar Header -->
+        <div class="calendar-header shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-light" data-action="prev-month">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <h5 class="mb-0">{{ current_month.strftime('%B %Y') }}</h5>
+                    <button class="btn btn-light" data-action="next-month">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-light active">Month</button>
+                    <button class="btn btn-light">Week</button>
+                    <button class="btn btn-light">Day</button>
+                </div>
+            </div>
+
+            <div class="calendar-grid mb-2">
+                <div class="text-center text-muted">Sun</div>
+                <div class="text-center text-muted">Mon</div>
+                <div class="text-center text-muted">Tue</div>
+                <div class="text-center text-muted">Wed</div>
+                <div class="text-center text-muted">Thu</div>
+                <div class="text-center text-muted">Fri</div>
+                <div class="text-center text-muted">Sat</div>
+            </div>
+        </div>
+
+        <!-- Add this after the calendar header -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search activities...">
+                    <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="filterType">
+                    <option value="all">All Types</option>
+                    <option value="appointment">Appointments</option>
+                    <option value="therapy">Therapy Sessions</option>
+                    <option value="medication">Medications</option>
+                    <option value="exercise">Exercise</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary" id="exportCSV">
+                        <i class="bi bi-file-earmark-excel"></i> Export CSV
+                    </button>
+                    <button class="btn btn-outline-primary" id="exportPDF">
+                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calendar Grid -->
+        <div class="calendar-grid mb-4" id="calendarBody">
+            <!-- Calendar days will be populated by JavaScript -->
+        </div>
+
+        <!-- Activities Management Section -->
+        <div class="activities-management mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Activities Management</h5>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active" data-status="all" onclick="filterActivities('all')">
+                        All Activities
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-status="in_progress" onclick="filterActivities('in_progress')">
+                        In Progress
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-status="completed" onclick="filterActivities('completed')">
+                        Completed
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" data-status="pending" onclick="filterActivities('pending')">
+                        Pending
+                    </button>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="activities-container">
+                        {% for activity in all_activities %}
+                        <div class="activity-card" data-status="{{ activity.status }}">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h6 class="mb-1">{{ activity.title }}</h6>
+                                        <span class="status-badge status-{{ activity.status }}">{{ activity.status | replace('_', ' ') | title }}</span>
+                                    </div>
+                                    <p class="text-muted small mb-2">{{ activity.doctor_name or 'No doctor assigned' }}</p>
+                                </div>
+                                <div class="text-end">
+                                    <p class="small mb-0">{{ activity.scheduled_date.strftime('%B %d, %Y') }}</p>
+                                    <p class="small mb-0">{{ activity.scheduled_date.strftime('%I:%M %p') }}</p>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-clock text-muted"></i>
+                                    <span class="small">{{ activity.duration }} minutes</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-geo-alt text-muted"></i>
+                                    <span class="small">{{ activity.location or 'No location set' }}</span>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-light btn-sm edit-activity-btn" data-activity-id="{{ activity.id }}">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                <button class="btn btn-light btn-sm delete-activity-btn" data-activity-id="{{ activity.id }}">
+                                    <i class="bi bi-trash"></i> Cancel
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Today's Activities -->
+        <div class="row">
+            <div class="col-md-8">
+                <h5 class="mb-3">Today's Activities</h5>
+                <div class="activity-list">
+                    {% if activities_by_date[current_month.strftime('%Y-%m-%d')] %}
+                        {% for activity in activities_by_date[current_month.strftime('%Y-%m-%d')] %}
+                        <div class="activity-card">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h6 class="mb-1">{{ activity.title }}</h6>
+                                    <p class="text-muted small mb-0">{{ activity.doctor_name or 'No doctor assigned' }}</p>
+                                </div>
+                                <span class="status-badge status-{{ activity.status }}">{{ activity.status | replace('_', ' ') | title }}</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-clock text-muted"></i>
+                                    <span class="small">{{ activity.time }}</span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-geo-alt text-muted"></i>
+                                    <span class="small">{{ activity.location or 'No location set' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            No activities scheduled for today.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <h5 class="mb-3">Activity Types</h5>
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div style="width: 12px; height: 12px; background-color: #7c3aed; border-radius: 50%;"></div>
+                            <div>Appointments</div>
+                            <span class="ms-auto text-muted small">8 scheduled</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div style="width: 12px; height: 12px; background-color: #059669; border-radius: 50%;"></div>
+                            <div>Therapy Sessions</div>
+                            <span class="ms-auto text-muted small">5 scheduled</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div style="width: 12px; height: 12px; background-color: #d97706; border-radius: 50%;"></div>
+                            <div>Medications</div>
+                            <span class="ms-auto text-muted small">12 scheduled</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <div style="width: 12px; height: 12px; background-color: #2563eb; border-radius: 50%;"></div>
+                            <div>Exercise Sessions</div>
+                            <span class="ms-auto text-muted small">6 scheduled</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Activity Modal -->
+    <div class="modal fade" id="scheduleActivityModal" tabindex="-1" aria-labelledby="scheduleActivityModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="scheduleActivityModalLabel">Schedule New Activity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="scheduleActivityForm" action="{{ url_for('add_activity') }}" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="patient_id" class="form-label">Patient</label>
+                                <select class="form-select" id="patient_id" name="patient_id" required>
+                                    <option value="">Select patient</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.first_name }} {{ patient.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="care_plan_id" class="form-label">Care Plan</label>
+                                <select class="form-select" id="care_plan_id" name="care_plan_id" required>
+                                    <option value="">Select care plan</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="goal_id" class="form-label">Related Goal (Optional)</label>
+                                <select class="form-select" id="goal_id" name="goal_id">
+                                    <option value="">Select goal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="title" class="form-label">Activity Title</label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="activity_date" class="form-label">Date</label>
+                                <input type="date" class="form-control" id="activity_date" name="activity_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="activity_time" class="form-label">Time</label>
+                                <input type="time" class="form-control" id="activity_time" name="activity_time" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="duration" class="form-label">Duration (minutes)</label>
+                                <input type="number" class="form-control" id="duration" name="duration" required min="15" step="15">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="activity_type" class="form-label">Activity Type</label>
+                                <select class="form-select" id="activity_type" name="activity_type" required>
+                                    <option value="appointment">Appointment</option>
+                                    <option value="therapy">Therapy Session</option>
+                                    <option value="medication">Medication</option>
+                                    <option value="exercise">Exercise</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="doctor_name" class="form-label">Doctor Name</label>
+                                <input type="text" class="form-control" id="doctor_name" name="doctor_name">
+                            </div>
+                            <div class="col-md-12">
+                                <label for="status" class="form-label">Status</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="scheduleActivityForm" class="btn btn-primary" id="submitActivityBtn" style="background-color: #7c3aed; border: none;">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <span class="btn-text">Schedule Activity</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Appointment Modal -->
+    <div class="modal fade" id="viewAppointmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Appointment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="appointmentDetails"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Activity Modal -->
+    <div class="modal fade" id="editActivityModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Activity</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editActivityForm">
+                        <input type="hidden" id="editActivityId" name="id">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Title</label>
+                                <input type="text" class="form-control" name="title" id="editTitle" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Description</label>
+                                <textarea class="form-control" name="description" id="editDescription" rows="3"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date</label>
+                                <input type="date" class="form-control" name="activity_date" id="editDate" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Time</label>
+                                <input type="time" class="form-control" name="activity_time" id="editTime" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Duration (minutes)</label>
+                                <input type="number" class="form-control" name="duration" id="editDuration" required min="15" step="15">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Activity Type</label>
+                                <select class="form-select" name="activity_type" id="editType" required>
+                                    <option value="appointment">Appointment</option>
+                                    <option value="therapy">Therapy Session</option>
+                                    <option value="medication">Medication</option>
+                                    <option value="exercise">Exercise</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Doctor</label>
+                                <input type="text" class="form-control" name="doctor_name" id="editDoctor">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Location</label>
+                                <input type="text" class="form-control" name="location" id="editLocation">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" name="status" id="editStatus" required>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="completed">Completed</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="updateActivity()" style="background-color: #7c3aed; border: none;">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add event listener for Schedule Activity button
+        document.querySelector('.btn-primary').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('scheduleActivityModal'));
+            modal.show();
+        });
+
+        // Handle patient selection to load care plans
+        document.getElementById('patient_id').addEventListener('change', async function() {
+            const patientId = this.value;
+            const carePlanSelect = document.getElementById('care_plan_id');
+            const goalSelect = document.getElementById('goal_id');
+            
+            // Clear current options
+            carePlanSelect.innerHTML = '<option value="">Select care plan</option>';
+            goalSelect.innerHTML = '<option value="">Select goal</option>';
+            
+            if (patientId) {
+                try {
+                    const response = await fetch(`/api/patient/${patientId}/care-plans`);
+                    if (!response.ok) throw new Error('Failed to fetch care plans');
+                    
+                    const carePlans = await response.json();
+                    carePlans.forEach(plan => {
+                        const option = document.createElement('option');
+                        option.value = plan.id;
+                        option.textContent = plan.title;
+                        carePlanSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error fetching care plans:', error);
+                }
+            }
+        });
+
+        // Handle care plan selection to load goals
+        document.getElementById('care_plan_id').addEventListener('change', async function() {
+            const carePlanId = this.value;
+            const goalSelect = document.getElementById('goal_id');
+            
+            // Clear current options
+            goalSelect.innerHTML = '<option value="">Select goal</option>';
+            
+            if (carePlanId) {
+                try {
+                    const response = await fetch(`/api/care-plan/${carePlanId}/goals`);
+                    if (!response.ok) throw new Error('Failed to fetch goals');
+                    
+                    const goals = await response.json();
+                    goals.forEach(goal => {
+                        const option = document.createElement('option');
+                        option.value = goal.id;
+                        option.textContent = goal.title;
+                        goalSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error('Error fetching goals:', error);
+                }
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('scheduleActivityForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitActivityBtn');
+            const spinner = submitBtn.querySelector('.spinner-border');
+            const btnText = submitBtn.querySelector('.btn-text');
+            
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            btnText.textContent = this.getAttribute('data-mode') === 'edit' ? 'Saving...' : 'Scheduling...';
+            
+            try {
+                // Determine if this is an edit or new activity
+                const mode = this.getAttribute('data-mode');
+                const activityId = this.getAttribute('data-activity-id');
+                
+                let url = this.action;
+                let method = 'POST';
+                
+                if (mode === 'edit' && activityId) {
+                    url = `/api/activity/${activityId}`;
+                    method = 'PUT';
+                }
+                
+                // Collect form data
+                const formData = new FormData(this);
+                
+                // Log form data for debugging
+                console.log('Form data before submission:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key + ': ' + value);
+                }
+                
+                // Validate required fields
+                const requiredFields = ['patient_id', 'care_plan_id', 'title', 'description', 'activity_date', 'activity_time', 'duration', 'activity_type', 'location'];
+                const missingFields = [];
+                
+                requiredFields.forEach(field => {
+                    if (!formData.get(field)) {
+                        missingFields.push(field);
+                    }
+                });
+                
+                if (missingFields.length > 0) {
+                    throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+                }
+                
+                // For PUT requests, convert to JSON
+                let requestBody;
+                let headers = {};
+                
+                if (method === 'PUT') {
+                    const data = Object.fromEntries(formData.entries());
+                    data.scheduled_date = `${data.activity_date}T${data.activity_time}`;
+                    delete data.activity_date;
+                    delete data.activity_time;
+                    requestBody = JSON.stringify(data);
+                    headers['Content-Type'] = 'application/json';
+                } else {
+                    requestBody = formData;
+                }
+                
+                console.log('Submitting request:', {
+                    url,
+                    method,
+                    headers,
+                    body: requestBody
+                });
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: headers,
+                    body: requestBody
+                });
+                
+                const data = await response.json();
+                console.log('Server response:', data);
+                
+                if (data.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleActivityModal'));
+                    modal.hide();
+                    
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.calendar-header'));
+                    
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    ${error.message || 'An error occurred while saving the activity. Please try again.'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                this.insertBefore(alertDiv, this.firstChild);
+            } finally {
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+                btnText.textContent = this.getAttribute('data-mode') === 'edit' ? 'Save Changes' : 'Schedule Activity';
+            }
+        });
+
+        // Clear validation states when modal is hidden
+        document.getElementById('scheduleActivityModal').addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('scheduleActivityForm');
+            form.reset();
+            form.querySelectorAll('.alert').forEach(alert => alert.remove());
+            form.querySelectorAll('.is-invalid').forEach(input => {
+                input.classList.remove('is-invalid');
+            });
+            form.querySelectorAll('.invalid-feedback').forEach(feedback => {
+                feedback.remove();
+            });
+        });
+
+        // Add input event listeners to clear validation states
+        document.querySelectorAll('#scheduleActivityForm input, #scheduleActivityForm select, #scheduleActivityForm textarea').forEach(input => {
+            input.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+                const feedback = this.parentNode.querySelector('.invalid-feedback');
+                if (feedback) {
+                    feedback.remove();
+                }
+            });
+        });
+
+        // Calendar functionality
+        let currentDate = new Date('{{ current_month.strftime("%Y-%m-%d") }}');
+        const activitiesByDate = {{ activities_by_date | tojson | safe }};
+        
+        function updateCalendarTitle() {
+            document.querySelector('.calendar-header h5').textContent = 
+                currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        }
+        
+        function generateCalendar() {
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - startDate.getDay());
+            
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
+            
+            const today = new Date();
+            
+            for (let i = 0; i < 42; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                // Create day number element
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = currentDate.getDate();
+                dayElement.appendChild(dayNumber);
+                
+                // Check if this day has any activities
+                const dateKey = currentDate.toISOString().split('T')[0];
+                const dayActivities = activitiesByDate[dateKey] || [];
+                
+                if (dayActivities.length > 0) {
+                    dayElement.classList.add('has-events');
+                    
+                    // Add activities to the day
+                    const activitiesContainer = document.createElement('div');
+                    activitiesContainer.className = 'day-activities';
+                    
+                    dayActivities.forEach(activity => {
+                        const activityElement = document.createElement('div');
+                        activityElement.className = `activity-item activity-${activity.type}`;
+                        activityElement.innerHTML = `
+                            <div class="activity-time">${activity.time}</div>
+                            <div class="activity-title">${activity.title}</div>
+                        `;
+                        activityElement.title = `${activity.title}
+Doctor: ${activity.doctor_name || 'Not specified'}
+Location: ${activity.location || 'Not specified'}`;
+                        activityElement.onclick = () => viewAppointment(activity.id);
+                        activitiesContainer.appendChild(activityElement);
+                    });
+                    
+                    dayElement.appendChild(activitiesContainer);
+                }
+                
+                if (currentDate.getMonth() !== firstDay.getMonth()) {
+                    dayElement.classList.add('other-month');
+                }
+                
+                if (currentDate.toDateString() === today.toDateString()) {
+                    dayElement.classList.add('today');
+                }
+                
+                calendarBody.appendChild(dayElement);
+            }
+        }
+        
+        // Initialize calendar
+        updateCalendarTitle();
+        generateCalendar();
+        
+        // Handle month navigation
+        document.querySelector('button[data-action="prev-month"]').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            updateCalendarTitle();
+            generateCalendar();
+        });
+        
+        document.querySelector('button[data-action="next-month"]').addEventListener('click', () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            updateCalendarTitle();
+            generateCalendar();
+        });
+
+        // Add activity functions
+        function saveAppointment() {
+            const form = document.getElementById('appointmentForm');
+            const formData = new FormData(form);
+            
+            fetch('/api/activity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(Object.fromEntries(formData))
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleAppointmentModal'));
+                    modal.hide();
+                    
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        ${result.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.calendar-header'));
+                    
+                    // Reload page after a short delay
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    throw new Error(result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to schedule activity: ' + error.message);
+            });
+        }
+
+        function viewAppointment(id) {
+            fetch(`/api/activity/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const details = document.getElementById('appointmentDetails');
+                        details.innerHTML = `
+                            <h4>${data.activity.title}</h4>
+                            <p><strong>Doctor:</strong> ${data.activity.doctor_name || 'Not specified'}</p>
+                            <p><strong>Location:</strong> ${data.activity.location || 'Not specified'}</p>
+                            <p><strong>Date & Time:</strong> ${new Date(data.activity.scheduled_date).toLocaleString()}</p>
+                            <p><strong>Description:</strong> ${data.activity.description || 'No description'}</p>
+                        `;
+                        new bootstrap.Modal(document.getElementById('viewAppointmentModal')).show();
+                    } else {
+                        alert(data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to load appointment details');
+                });
+        }
+
+        async function populateEditActivityDropdowns(activity) {
+            // 1. Populate patients
+            const patientSelect = document.getElementById('patient_id');
+            const carePlanSelect = document.getElementById('care_plan_id');
+            const goalSelect = document.getElementById('goal_id');
+            // Fetch patients
+            const patients = await fetch('/api/patients').then(r => r.json());
+            patientSelect.innerHTML = '<option value="">Select patient</option>';
+            patients.forEach(p => {
+                patientSelect.innerHTML += `<option value="${p.id}" ${activity.patient_id == p.id ? 'selected' : ''}>${p.first_name} ${p.last_name}</option>`;
+            });
+            // Fetch care plans for selected patient
+            carePlanSelect.innerHTML = '<option value="">Select care plan</option>';
+            if (activity.patient_id) {
+                const carePlans = await fetch(`/api/patient/${activity.patient_id}/care-plans`).then(r => r.json());
+                carePlans.forEach(cp => {
+                    carePlanSelect.innerHTML += `<option value="${cp.id}" ${activity.care_plan_id == cp.id ? 'selected' : ''}>${cp.title}</option>`;
+                });
+            }
+            // Fetch goals for selected care plan
+            goalSelect.innerHTML = '<option value="">Select goal</option>';
+            if (activity.care_plan_id) {
+                const goals = await fetch(`/api/care-plan/${activity.care_plan_id}/goals`).then(r => r.json());
+                goals.forEach(g => {
+                    goalSelect.innerHTML += `<option value="${g.id}" ${activity.goal_id == g.id ? 'selected' : ''}>${g.title}</option>`;
+                });
+            }
+        }
+
+        async function editAppointment(id) {
+            try {
+                // Show loading state
+                const modal = new bootstrap.Modal(document.getElementById('scheduleActivityModal'));
+                modal.show();
+                
+                // Set form mode to edit
+                const form = document.getElementById('scheduleActivityForm');
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-activity-id', id);
+                
+                // Update modal title and button text
+                document.getElementById('scheduleActivityModalLabel').textContent = 'Edit Activity';
+                document.getElementById('submitActivityBtn').querySelector('.btn-text').textContent = 'Save Changes';
+                
+                // Fetch activity details
+                const response = await fetch(`/api/activity/${id}`);
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message);
+                }
+                
+                const activity = data.activity;
+                console.log('Activity data:', activity); // Debug log
+                
+                // First, load all patients
+                const patientsResponse = await fetch('/api/patients');
+                const patients = await patientsResponse.json();
+                
+                // Populate patient dropdown
+                const patientSelect = document.getElementById('patient_id');
+                patientSelect.innerHTML = '<option value="">Select patient</option>';
+                patients.forEach(patient => {
+                    const option = document.createElement('option');
+                    option.value = patient.id;
+                    option.textContent = `${patient.first_name} ${patient.last_name}`;
+                    if (patient.id === activity.patient_id) {
+                        option.selected = true;
+                    }
+                    patientSelect.appendChild(option);
+                });
+                
+                // Load care plans for the selected patient
+                if (activity.patient_id) {
+                    const carePlansResponse = await fetch(`/api/patient/${activity.patient_id}/care-plans`);
+                    const carePlans = await carePlansResponse.json();
+                    
+                    const carePlanSelect = document.getElementById('care_plan_id');
+                    carePlanSelect.innerHTML = '<option value="">Select care plan</option>';
+                    carePlans.forEach(plan => {
+                        const option = document.createElement('option');
+                        option.value = plan.id;
+                        option.textContent = plan.title;
+                        if (plan.id === activity.care_plan_id) {
+                            option.selected = true;
+                        }
+                        carePlanSelect.appendChild(option);
+                    });
+                    
+                    // Load goals for the selected care plan
+                    if (activity.care_plan_id) {
+                        const goalsResponse = await fetch(`/api/care-plan/${activity.care_plan_id}/goals`);
+                        const goals = await goalsResponse.json();
+                        
+                        const goalSelect = document.getElementById('goal_id');
+                        goalSelect.innerHTML = '<option value="">Select goal</option>';
+                        goals.forEach(goal => {
+                            const option = document.createElement('option');
+                            option.value = goal.id;
+                            option.textContent = goal.title;
+                            if (goal.id === activity.goal_id) {
+                                option.selected = true;
+                            }
+                            goalSelect.appendChild(option);
+                        });
+                    }
+                }
+                
+                // Populate other form fields
+                document.getElementById('title').value = activity.title;
+                document.getElementById('description').value = activity.description;
+                document.getElementById('activity_date').value = activity.scheduled_date.split('T')[0];
+                document.getElementById('activity_time').value = activity.scheduled_date.split('T')[1].slice(0,5);
+                document.getElementById('duration').value = activity.duration;
+                document.getElementById('activity_type').value = activity.activity_type;
+                document.getElementById('location').value = activity.location;
+                document.getElementById('doctor_name').value = activity.doctor_name || '';
+                document.getElementById('status').value = activity.status;
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to load activity details: ' + error.message);
+            }
+        }
+
+        function updateActivity() {
+            const form = document.getElementById('editActivityForm');
+            const formData = new FormData(form);
+            const id = formData.get('id');
+            const activityDate = formData.get('activity_date');
+            const activityTime = formData.get('activity_time');
+            const scheduledDate = new Date(`${activityDate}T${activityTime}`);
+            const data = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                scheduled_date: scheduledDate.toISOString(),
+                duration: parseInt(formData.get('duration')),
+                activity_type: formData.get('activity_type'),
+                doctor_name: formData.get('doctor_name'),
+                location: formData.get('location'),
+                status: formData.get('status')
+            };
+            fetch(`/api/activity/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editActivityModal'));
+                    modal.hide();
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        ${result.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.calendar-header'));
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    throw new Error(result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update activity: ' + error.message);
+            });
+        }
+
+        function deleteAppointment(id) {
+            if (confirm('Are you sure you want to cancel this appointment?')) {
+                fetch(`/api/activity/${id}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to cancel appointment');
+                });
+            }
+        }
+
+        // Filter activities
+        function filterActivities(status) {
+            // Update active button state
+            document.querySelectorAll('.activities-management .btn-group .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-status="${status}"]`).classList.add('active');
+            
+            // Filter activities
+            const activities = document.querySelectorAll('.activities-container .activity-card');
+            activities.forEach(activity => {
+                if (status === 'all' || activity.dataset.status === status) {
+                    activity.style.display = 'block';
+                } else {
+                    activity.style.display = 'none';
+                }
+            });
+        }
+
+        // Initialize with all activities shown
+        document.addEventListener('DOMContentLoaded', function() {
+            filterActivities('all');
+        });
+
+        function openActivityModal(mode, activity) {
+            const modal = new bootstrap.Modal(document.getElementById('scheduleActivityModal'));
+            const form = document.getElementById('scheduleActivityForm');
+            const modalTitle = document.getElementById('scheduleActivityModalLabel');
+            const submitBtn = document.getElementById('submitActivityBtn');
+
+            if (mode === 'edit') {
+                modalTitle.textContent = 'Edit Activity';
+                submitBtn.querySelector('.btn-text').textContent = 'Save Changes';
+                form.setAttribute('data-mode', 'edit');
+                form.setAttribute('data-activity-id', activity.id);
+                // Populate form fields
+                form.patient_id.value = activity.patient_id;
+                form.care_plan_id.value = activity.care_plan_id;
+                form.goal_id.value = activity.goal_id || '';
+                form.title.value = activity.title;
+                form.description.value = activity.description;
+                form.activity_date.value = activity.scheduled_date.split('T')[0];
+                form.activity_time.value = activity.scheduled_date.split('T')[1].slice(0,5);
+                form.duration.value = activity.duration;
+                form.activity_type.value = activity.activity_type;
+                form.location.value = activity.location;
+                form.status.value = activity.status;
+            } else {
+                modalTitle.textContent = 'Schedule New Activity';
+                submitBtn.querySelector('.btn-text').textContent = 'Schedule Activity';
+                form.setAttribute('data-mode', 'add');
+                form.removeAttribute('data-activity-id');
+                form.reset();
+            }
+            modal.show();
+        }
+
+        // Schedule Activity button handler
+        const scheduleBtn = document.querySelector('.btn.btn-primary');
+        scheduleBtn.addEventListener('click', function() {
+            openActivityModal('add');
+        });
+
+        function attachActivityListeners() {
+            document.querySelectorAll('.edit-activity-btn').forEach(btn => {
+                btn.onclick = function() {
+                    const id = this.getAttribute('data-activity-id');
+                    editAppointment(id);
+                };
+            });
+            document.querySelectorAll('.delete-activity-btn').forEach(btn => {
+                btn.onclick = function() {
+                    const id = this.getAttribute('data-activity-id');
+                    deleteAppointment(id);
+                };
+            });
+        }
+
+        function fetchActivitiesByStatus(status) {
+            fetch(`/activities?status=${status}`)
+                .then(response => response.text())
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    const newActivities = doc.querySelector('.activities-container');
+                    document.querySelector('.activities-container').innerHTML = newActivities.innerHTML;
+                    document.querySelectorAll('.activities-management .btn-group .btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    document.querySelector(`[data-status="${status}"]`).classList.add('active');
+                    attachActivityListeners();
+                });
+        }
+
+        // Attach click handlers to status filter buttons
+        window.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.activities-management .btn-group .btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const status = this.getAttribute('data-status');
+                    fetchActivitiesByStatus(status);
+                });
+            });
+            attachActivityListeners();
+        });
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const activities = document.querySelectorAll('.activity-card');
+            
+            activities.forEach(activity => {
+                const title = activity.querySelector('h6').textContent.toLowerCase();
+                const description = activity.querySelector('.text-muted').textContent.toLowerCase();
+                const doctor = activity.querySelector('.doctor-name')?.textContent.toLowerCase() || '';
+                const location = activity.querySelector('.location')?.textContent.toLowerCase() || '';
+                
+                if (title.includes(searchTerm) || 
+                    description.includes(searchTerm) || 
+                    doctor.includes(searchTerm) || 
+                    location.includes(searchTerm)) {
+                    activity.style.display = 'block';
+                } else {
+                    activity.style.display = 'none';
+                }
+            });
+        });
+
+        // Filter functionality
+        document.getElementById('filterType').addEventListener('change', function(e) {
+            const filterValue = e.target.value;
+            const activities = document.querySelectorAll('.activity-card');
+            
+            activities.forEach(activity => {
+                const type = activity.dataset.type;
+                if (filterValue === 'all' || type === filterValue) {
+                    activity.style.display = 'block';
+                } else {
+                    activity.style.display = 'none';
+                }
+            });
+        });
+
+        // Export to CSV
+        document.getElementById('exportCSV').addEventListener('click', function() {
+            const activities = document.querySelectorAll('.activity-card');
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // Add headers
+            csvContent += "Title,Description,Date,Time,Type,Doctor,Location,Status\n";
+            
+            activities.forEach(activity => {
+                const title = activity.querySelector('h6').textContent;
+                const description = activity.querySelector('.text-muted').textContent;
+                const date = activity.querySelector('.date').textContent;
+                const time = activity.querySelector('.time').textContent;
+                const type = activity.dataset.type;
+                const doctor = activity.querySelector('.doctor-name')?.textContent || '';
+                const location = activity.querySelector('.location')?.textContent || '';
+                const status = activity.querySelector('.status-badge').textContent;
+                
+                // Escape commas and quotes
+                const row = [
+                    `"${title.replace(/"/g, '""')}"`,
+                    `"${description.replace(/"/g, '""')}"`,
+                    `"${date}"`,
+                    `"${time}"`,
+                    `"${type}"`,
+                    `"${doctor.replace(/"/g, '""')}"`,
+                    `"${location.replace(/"/g, '""')}"`,
+                    `"${status}"`
+                ].join(',');
+                
+                csvContent += row + "\n";
+            });
+            
+            // Create download link
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "activities.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Export to PDF
+        document.getElementById('exportPDF').addEventListener('click', function() {
+            const activities = document.querySelectorAll('.activity-card');
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(16);
+            doc.text('Activities Report', 14, 15);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+            
+            // Add table headers
+            const headers = ['Title', 'Date', 'Time', 'Type', 'Doctor', 'Location', 'Status'];
+            let y = 35;
+            
+            doc.setFontSize(10);
+            headers.forEach((header, i) => {
+                doc.text(header, 14 + (i * 27), y);
+            });
+            
+            y += 10;
+            
+            // Add activity data
+            activities.forEach(activity => {
+                if (y > 280) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                const title = activity.querySelector('h6').textContent;
+                const date = activity.querySelector('.date').textContent;
+                const time = activity.querySelector('.time').textContent;
+                const type = activity.dataset.type;
+                const doctor = activity.querySelector('.doctor-name')?.textContent || '';
+                const location = activity.querySelector('.location')?.textContent || '';
+                const status = activity.querySelector('.status-badge').textContent;
+                
+                doc.text(title, 14, y);
+                doc.text(date, 41, y);
+                doc.text(time, 68, y);
+                doc.text(type, 95, y);
+                doc.text(doctor, 122, y);
+                doc.text(location, 149, y);
+                doc.text(status, 176, y);
+                
+                y += 10;
+            });
+            
+            // Save the PDF
+            doc.save('activities.pdf');
+        });
+    });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNest - Sign up</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fe;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+        }
+        .google-btn {
+            background-color: white;
+            color: #3c4043;
+            border: 1px solid #dadce0;
+            padding: 10px;
+            width: 100%;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+        .google-btn:hover {
+            background-color: #f8f9fa;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            color: #6b7280;
+        }
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .divider span {
+            padding: 0 10px;
+            font-size: 0.875rem;
+        }
+        .sign-up-btn {
+            background-color: #7c3aed;
+            border: none;
+        }
+        .sign-up-btn:hover {
+            background-color: #6d28d9;
+        }
+        .signin-text {
+            color: #6b7280;
+            margin-top: 1.5rem;
+        }
+        .signin-link {
+            color: #7c3aed;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .signin-link:hover {
+            color: #6d28d9;
+        }
+        .alert {
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+        .alert-error {
+            color: #991b1b;
+            background-color: #fee2e2;
+            border-color: #fecaca;
+        }
+        .alert-success {
+            color: #065f46;
+            background-color: #d1fae5;
+            border-color: #a7f3d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center mt-5">
+            <div class="col-md-5">
+                <div class="text-center mb-4">
+                    <h1 class="h3 text-purple-600" style="color: #7c3aed;">CareNest</h1>
+                    <p class="text-muted">Secure healthcare management platform</p>
+                </div>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }}" role="alert">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <h2 class="h4 mb-2">Create an account</h2>
+                        <p class="text-muted mb-4">Get started with your free account</p>
+                        
+                        <a href="{{ url_for('google_login') }}" class="btn google-btn mb-3">
+                            <img src="https://www.google.com/favicon.ico" alt="Google" style="width: 18px;">
+                            Continue with Google
+                        </a>
+
+                        <div class="divider">
+                            <span>OR CONTINUE WITH</span>
+                        </div>
+
+                        <form method="POST" action="{{ url_for('signup') }}">
+                            <div class="mb-3">
+                                <label for="name" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="name" name="name" placeholder="John Doe" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email" placeholder="your.email@example.com" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required minlength="6">
+                            </div>
+                            <div class="mb-3">
+                                <label for="role" class="form-label">Role</label>
+                                <select class="form-select" id="role" name="role" required>
+                                    <option value="patient">Patient</option>
+                                    <option value="doctor">Doctor</option>
+                                    <option value="nurse">Nurse</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary sign-up-btn w-100 mb-3">Create Account</button>
+                        </form>
+                    </div>
+                </div>
+                <p class="text-center signin-text">
+                    Already have an account? <a href="{{ url_for('login') }}" class="signin-link">Sign in</a>
+                </p>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

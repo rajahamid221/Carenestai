@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNest - Care Plans</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fe;
+        }
+        .sidebar {
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .nav-link {
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+        }
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+            font-weight: 500;
+        }
+        .profile-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        .content-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: none;
+        }
+        .search-box {
+            max-width: 400px;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .status-active {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .status-pending {
+            background-color: #fef9c3;
+            color: #854d0e;
+        }
+        .status-completed {
+            background-color: #e0e7ff;
+            color: #3730a3;
+        }
+        .action-btn {
+            padding: 0.25rem;
+            color: #6b7280;
+            background: none;
+            border: none;
+        }
+        .action-btn:hover {
+            color: #7c3aed;
+            background-color: #f3f4f6;
+            border-radius: 4px;
+        }
+        .table > :not(caption) > * > * {
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="py-4 px-4">
+            <h4 class="mb-0" style="color: #7c3aed;">CareNest</h4>
+            <p class="text-muted small">Healthcare Platform</p>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link" href="{{ url_for('patients') }}">
+                <i class="bi bi-people"></i> Patients
+            </a>
+            <a class="nav-link" href="{{ url_for('messages') }}">
+                <i class="bi bi-chat"></i> Messages
+            </a>
+            <a class="nav-link active" href="{{ url_for('care_plans') }}">
+                <i class="bi bi-clipboard2-pulse"></i> Care Plans
+            </a>
+            <a class="nav-link" href="{{ url_for('goals') }}">
+                <i class="bi bi-trophy"></i> Goals
+            </a>
+            <a class="nav-link" href="{{ url_for('activities') }}">
+                <i class="bi bi-calendar3"></i> Activities
+            </a>
+            <a class="nav-link" href="{{ url_for('analytics') }}">
+                <i class="bi bi-graph-up"></i> Analytics
+            </a>
+            <a class="nav-link" href="{{ url_for('notifications') }}">
+                <i class="bi bi-bell"></i> Notifications
+            </a>
+        </nav>
+
+        <div class="profile-section">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    {{ current_user.name[0].upper() }}
+                </div>
+                <div>
+                    <div class="fw-500">{{ current_user.name }}</div>
+                    <div class="text-muted small">{{ current_user.role.title() }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-link text-muted ms-auto">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1">Care Plans</h4>
+                <p class="text-muted mb-0">Manage and monitor patient care plans</p>
+            </div>
+            <button class="btn btn-primary" style="background-color: #7c3aed; border: none;" data-bs-toggle="modal" data-bs-target="#addCarePlanModal">
+                <i class="bi bi-plus"></i> New Care Plan
+            </button>
+        </div>
+
+        <div class="content-card shadow-sm mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="search-box">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" placeholder="Search care plans...">
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                    <button class="btn btn-outline-secondary">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Patient Name</th>
+                            <th>Care Plan</th>
+                            <th>Start Date</th>
+                            <th>End Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for care_plan in care_plans %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-500">{{ care_plan.patient.first_name }} {{ care_plan.patient.last_name }}</div>
+                                        <div class="text-muted small">ID: {{ care_plan.patient.id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>{{ care_plan.title }}</div>
+                                <div class="text-muted small">{{ care_plan.diagnosis }}</div>
+                            </td>
+                            <td>{{ care_plan.start_date.strftime('%b %d, %Y') }}</td>
+                            <td>{{ care_plan.end_date.strftime('%b %d, %Y') }}</td>
+                            <td>
+                                <span class="status-badge status-{{ care_plan.status }}">{{ care_plan.status|title }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="action-btn view-care-plan" title="View Details" data-id="{{ care_plan.id }}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="action-btn edit-care-plan" title="Edit" data-id="{{ care_plan.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="action-btn delete-care-plan" title="Delete" data-id="{{ care_plan.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Care Plan Modal -->
+    <div class="modal fade" id="addCarePlanModal" tabindex="-1" aria-labelledby="addCarePlanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCarePlanModalLabel">New Care Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addCarePlanForm" action="{{ url_for('add_care_plan') }}" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="patientSelect" class="form-label">Patient</label>
+                                <select class="form-select" id="patientSelect" name="patient_id" required>
+                                    <option value="">Select patient</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.first_name }} {{ patient.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="planTitle" class="form-label">Care Plan Title</label>
+                                <input type="text" class="form-control" id="planTitle" name="title" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="diagnosis" class="form-label">Diagnosis</label>
+                                <input type="text" class="form-control" id="diagnosis" name="diagnosis" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="startDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="startDate" name="start_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="endDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="endDate" name="end_date" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="goals" class="form-label">Goals</label>
+                                <textarea class="form-control" id="goals" name="goals" rows="3" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="interventions" class="form-label">Interventions</label>
+                                <textarea class="form-control" id="interventions" name="interventions" rows="3" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="notes" class="form-label">Additional Notes</label>
+                                <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="addCarePlanForm" class="btn btn-primary" id="submitCarePlanBtn" style="background-color: #7c3aed; border: none;">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <span class="btn-text">Create Care Plan</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Care Plan Modal -->
+    <div class="modal fade" id="viewCarePlanModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Care Plan Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="fw-bold">Patient Name</label>
+                            <p id="viewPatientName"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Care Plan Title</label>
+                            <p id="viewPlanTitle"></p>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="fw-bold">Diagnosis</label>
+                            <p id="viewDiagnosis"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Start Date</label>
+                            <p id="viewStartDate"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">End Date</label>
+                            <p id="viewEndDate"></p>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold">Goals</label>
+                            <p id="viewGoals"></p>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold">Interventions</label>
+                            <p id="viewInterventions"></p>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold">Notes</label>
+                            <p id="viewNotes"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Care Plan Modal -->
+    <div class="modal fade" id="editCarePlanModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Care Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editCarePlanForm" method="POST">
+                        <input type="hidden" id="editCarePlanId" name="care_plan_id">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label for="editPlanTitle" class="form-label">Care Plan Title</label>
+                                <input type="text" class="form-control" id="editPlanTitle" name="title" required>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="editDiagnosis" class="form-label">Diagnosis</label>
+                                <input type="text" class="form-control" id="editDiagnosis" name="diagnosis" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="editStartDate" name="start_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editEndDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="editEndDate" name="end_date" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="editGoals" class="form-label">Goals</label>
+                                <textarea class="form-control" id="editGoals" name="goals" rows="3" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="editInterventions" class="form-label">Interventions</label>
+                                <textarea class="form-control" id="editInterventions" name="interventions" rows="3" required></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="editNotes" class="form-label">Additional Notes</label>
+                                <textarea class="form-control" id="editNotes" name="notes" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="editCarePlanForm" class="btn btn-primary" style="background-color: #7c3aed; border: none;">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteCarePlanModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Care Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this care plan? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('addCarePlanForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Clear previous alerts
+            this.querySelectorAll('.alert').forEach(alert => alert.remove());
+            
+            // Get submit button and show loading state
+            const submitBtn = document.getElementById('submitCarePlanBtn');
+            const spinner = submitBtn.querySelector('.spinner-border');
+            const btnText = submitBtn.querySelector('.btn-text');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            btnText.textContent = 'Creating...';
+            
+            try {
+                // Validate required fields
+                const requiredFields = ['patient_id', 'title', 'diagnosis', 'start_date', 'end_date', 'goals', 'interventions'];
+                let isValid = true;
+                requiredFields.forEach(field => {
+                    const input = this.querySelector(`[name="${field}"]`);
+                    if (!input.value.trim()) {
+                        isValid = false;
+                        input.classList.add('is-invalid');
+                        const feedback = document.createElement('div');
+                        feedback.className = 'invalid-feedback';
+                        feedback.textContent = 'This field is required';
+                        input.parentNode.appendChild(feedback);
+                    } else {
+                        input.classList.remove('is-invalid');
+                    }
+                });
+
+                if (!isValid) {
+                    throw new Error('Please fill in all required fields');
+                }
+                
+                const formData = new FormData(this);
+                
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Server response:', data);
+
+                if (data.success) {
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addCarePlanModal'));
+                    modal.hide();
+                    
+                    // Reset form
+                    this.reset();
+                    
+                    // Refresh the page
+                    window.location.reload();
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                // Show error message in modal
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    ${error.message || 'An error occurred while creating the care plan. Please try again.'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                this.insertBefore(alertDiv, this.firstChild);
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+                btnText.textContent = 'Create Care Plan';
+            }
+        });
+
+        // Clear validation states when modal is hidden
+        document.getElementById('addCarePlanModal').addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('addCarePlanForm');
+            form.reset();
+            form.querySelectorAll('.alert').forEach(alert => alert.remove());
+            form.querySelectorAll('.is-invalid').forEach(input => {
+                input.classList.remove('is-invalid');
+            });
+            form.querySelectorAll('.invalid-feedback').forEach(feedback => {
+                feedback.remove();
+            });
+        });
+
+        // Add input event listeners to clear validation states
+        document.querySelectorAll('#addCarePlanForm input, #addCarePlanForm select, #addCarePlanForm textarea').forEach(input => {
+            input.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+                const feedback = this.parentNode.querySelector('.invalid-feedback');
+                if (feedback) {
+                    feedback.remove();
+                }
+            });
+        });
+
+        // View Care Plan
+        document.querySelectorAll('.view-care-plan').forEach(button => {
+            button.addEventListener('click', async function() {
+                const carePlanId = this.dataset.id;
+                try {
+                    const response = await fetch(`/api/care-plan/${carePlanId}`);
+                    const data = await response.json();
+                    
+                    // Populate modal with care plan data
+                    document.getElementById('viewPatientName').textContent = data.patient_name;
+                    document.getElementById('viewPlanTitle').textContent = data.title;
+                    document.getElementById('viewDiagnosis').textContent = data.diagnosis;
+                    document.getElementById('viewStartDate').textContent = data.start_date;
+                    document.getElementById('viewEndDate').textContent = data.end_date;
+                    document.getElementById('viewGoals').textContent = data.goals;
+                    document.getElementById('viewInterventions').textContent = data.interventions;
+                    document.getElementById('viewNotes').textContent = data.notes || 'No additional notes';
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('viewCarePlanModal'));
+                    modal.show();
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to load care plan details');
+                }
+            });
+        });
+
+        // Edit Care Plan
+        document.querySelectorAll('.edit-care-plan').forEach(button => {
+            button.addEventListener('click', async function() {
+                const carePlanId = this.dataset.id;
+                try {
+                    const response = await fetch(`/api/care-plan/${carePlanId}`);
+                    const data = await response.json();
+                    
+                    // Populate form with care plan data
+                    document.getElementById('editCarePlanId').value = carePlanId;
+                    document.getElementById('editPlanTitle').value = data.title;
+                    document.getElementById('editDiagnosis').value = data.diagnosis;
+                    document.getElementById('editStartDate').value = data.start_date;
+                    document.getElementById('editEndDate').value = data.end_date;
+                    document.getElementById('editGoals').value = data.goals;
+                    document.getElementById('editInterventions').value = data.interventions;
+                    document.getElementById('editNotes').value = data.notes || '';
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('editCarePlanModal'));
+                    modal.show();
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to load care plan details');
+                }
+            });
+        });
+
+        // Delete Care Plan
+        let carePlanToDelete = null;
+        document.querySelectorAll('.delete-care-plan').forEach(button => {
+            button.addEventListener('click', function() {
+                carePlanToDelete = this.dataset.id;
+                const modal = new bootstrap.Modal(document.getElementById('deleteCarePlanModal'));
+                modal.show();
+            });
+        });
+
+        document.getElementById('confirmDelete').addEventListener('click', async function() {
+            if (!carePlanToDelete) return;
+            
+            try {
+                const response = await fetch(`/api/care-plan/${carePlanToDelete}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('deleteCarePlanModal'));
+                    modal.hide();
+                    
+                    // Show success message and refresh page
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        Care plan deleted successfully
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
+                    
+                    // Refresh the page after a short delay
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete care plan');
+            }
+        });
+
+        // Handle edit form submission
+        document.getElementById('editCarePlanForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const carePlanId = document.getElementById('editCarePlanId').value;
+            
+            try {
+                const response = await fetch(`/api/care-plan/${carePlanId}`, {
+                    method: 'PUT',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editCarePlanModal'));
+                    modal.hide();
+                    
+                    // Show success message and refresh page
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        Care plan updated successfully
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
+                    
+                    // Refresh the page after a short delay
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update care plan');
+            }
+        });
+    </script>
+</body>
+</html> 

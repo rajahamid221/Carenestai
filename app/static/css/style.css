@@ -1,0 +1,179 @@
+:root {
+    --purple: #7C3AED;
+    --purple-light: #8B5CF6;
+    --purple-hover: #6D28D9;
+    --gray-light: #F3F4F6;
+    --text-gray: #6B7280;
+}
+
+body {
+    background-color: #F9FAFB;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Sidebar Styles */
+.sidebar {
+    width: 250px;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+}
+
+.sidebar-header {
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.text-purple {
+    color: var(--purple);
+}
+
+.nav-link {
+    color: var(--text-gray);
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.nav-link:hover {
+    color: var(--purple);
+    background-color: var(--gray-light);
+}
+
+.nav-link.active {
+    color: var(--purple);
+    background-color: var(--gray-light);
+}
+
+.nav-link i {
+    width: 20px;
+}
+
+/* Main Content */
+.main-content {
+    margin-left: 250px;
+    min-height: 100vh;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Buttons */
+.btn-purple {
+    background-color: var(--purple);
+    color: white;
+    border: none;
+}
+
+.btn-purple:hover {
+    background-color: var(--purple-hover);
+    color: white;
+}
+
+/* Form Controls */
+.form-control {
+    border-radius: 0.375rem;
+    border: 1px solid #E5E7EB;
+    padding: 0.625rem;
+}
+
+.form-control:focus {
+    border-color: var(--purple);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
+}
+
+/* Status Badges */
+.badge {
+    padding: 0.35em 0.65em;
+    font-weight: 500;
+}
+
+.badge-purple {
+    background-color: var(--purple-light);
+    color: white;
+}
+
+/* Tables */
+.table th {
+    font-weight: 500;
+    color: var(--text-gray);
+    border-bottom-width: 1px;
+}
+
+/* Notifications */
+.notification-item {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background-color: #F3F4F6;
+    margin-bottom: 0.5rem;
+}
+
+.notification-item.new {
+    background-color: #EEF2FF;
+}
+
+/* Profile */
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: var(--gray-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--purple);
+}
+
+/* Analytics */
+.chart-container {
+    background-color: white;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+/* Messages */
+.message-list {
+    border-right: 1px solid #E5E7EB;
+}
+
+.message-item {
+    padding: 1rem;
+    border-bottom: 1px solid #E5E7EB;
+    cursor: pointer;
+}
+
+.message-item:hover {
+    background-color: var(--gray-light);
+}
+
+.message-item.active {
+    background-color: var(--gray-light);
+}
+
+/* Custom Switch */
+.form-switch .form-check-input {
+    background-color: #E5E7EB;
+    border: none;
+    width: 3rem;
+}
+
+.form-switch .form-check-input:checked {
+    background-color: var(--purple);
+}
+
+/* Login/Signup Forms */
+.auth-container {
+    max-width: 400px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background-color: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+} 

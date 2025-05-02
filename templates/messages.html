@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNest - Messages</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fe;
+        }
+        .sidebar {
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .nav-link {
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+        }
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+            font-weight: 500;
+        }
+        .profile-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        .messages-container {
+            display: flex;
+            height: calc(100vh - 4rem);
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .message-list {
+            width: 350px;
+            border-right: 1px solid #e5e7eb;
+            overflow-y: auto;
+        }
+        .message-detail {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .message-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            cursor: pointer;
+        }
+        .message-item:hover {
+            background-color: #f8f9fe;
+        }
+        .message-item.active {
+            background-color: #f3f4f6;
+            border-left: 3px solid #7c3aed;
+        }
+        .message-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .message-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        .message-reply {
+            padding: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        .message-compose {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            min-height: 120px;
+            padding: 0.75rem;
+        }
+        .unread {
+            font-weight: 500;
+        }
+        .unread .message-preview {
+            color: #374151;
+        }
+        .message-preview {
+            color: #6b7280;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .message-time {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+        .message-actions button {
+            padding: 0.5rem;
+            color: #6b7280;
+            background: none;
+            border: none;
+        }
+        .message-actions button:hover {
+            color: #7c3aed;
+            background-color: #f3f4f6;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="py-4 px-4">
+            <h4 class="mb-0" style="color: #7c3aed;">CareNest</h4>
+            <p class="text-muted small">Healthcare Platform</p>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link" href="{{ url_for('patients') }}">
+                <i class="bi bi-people"></i> Patients
+            </a>
+            <a class="nav-link active" href="{{ url_for('messages') }}">
+                <i class="bi bi-chat"></i> Messages
+            </a>
+            <a class="nav-link" href="{{ url_for('care_plans') }}">
+                <i class="bi bi-clipboard2-pulse"></i> Care Plans
+            </a>
+            <a class="nav-link" href="{{ url_for('goals') }}">
+                <i class="bi bi-trophy"></i> Goals
+            </a>
+            <a class="nav-link" href="{{ url_for('activities') }}">
+                <i class="bi bi-calendar3"></i> Activities
+            </a>
+            <a class="nav-link" href="{{ url_for('analytics') }}">
+                <i class="bi bi-graph-up"></i> Analytics
+            </a>
+            <a class="nav-link" href="{{ url_for('notifications') }}">
+                <i class="bi bi-bell"></i> Notifications
+            </a>
+        </nav>
+
+        <div class="profile-section">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    {{ current_user.name[0].upper() }}
+                </div>
+                <div>
+                    <div class="fw-500">{{ current_user.name }}</div>
+                    <div class="text-muted small">{{ current_user.role.title() }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-link text-muted ms-auto">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1">Messages</h4>
+                <p class="text-muted mb-0">Communicate with patients and staff</p>
+            </div>
+            <button class="btn btn-primary" style="background-color: #7c3aed; border: none;" data-bs-toggle="modal" data-bs-target="#composeModal">
+                <i class="bi bi-plus"></i> New Message
+            </button>
+        </div>
+
+        <div class="messages-container shadow-sm">
+            <!-- Message List -->
+            <div class="message-list">
+                <div class="p-3 border-bottom">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" placeholder="Search messages...">
+                    </div>
+                </div>
+
+                <!-- Sample Messages -->
+                <div class="message-item active unread">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div class="fw-500">Dr. Sarah Johnson</div>
+                        <div class="message-time">10:30 AM</div>
+                    </div>
+                    <div class="message-preview">Patient update: Latest test results for John Smith...</div>
+                </div>
+
+                <div class="message-item">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div class="fw-500">Nurse Mike</div>
+                        <div class="message-time">Yesterday</div>
+                    </div>
+                    <div class="message-preview">Medication schedule updated for Room 302...</div>
+                </div>
+
+                <div class="message-item">
+                    <div class="d-flex justify-content-between mb-2">
+                        <div class="fw-500">Reception</div>
+                        <div class="message-time">2 days ago</div>
+                    </div>
+                    <div class="message-preview">New appointment request from patient...</div>
+                </div>
+            </div>
+
+            <!-- Message Detail -->
+            <div class="message-detail">
+                <div class="message-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">Patient update: Latest test results</h5>
+                        <div class="text-muted">
+                            From: Dr. Sarah Johnson &lt;sarah.johnson@carenest.com&gt;
+                        </div>
+                    </div>
+                    <div class="message-actions">
+                        <button title="Reply">
+                            <i class="bi bi-reply"></i>
+                        </button>
+                        <button title="Forward">
+                            <i class="bi bi-forward"></i>
+                        </button>
+                        <button title="Delete">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="message-content">
+                    <p>Hello,</p>
+                    <p>I wanted to update you on John Smith's latest test results. The blood work came back and everything looks normal. However, I would recommend scheduling a follow-up appointment next week to discuss the treatment plan in detail.</p>
+                    <p>Key points to note:</p>
+                    <ul>
+                        <li>Blood pressure: 120/80</li>
+                        <li>Heart rate: 72 bpm</li>
+                        <li>Cholesterol levels: Within normal range</li>
+                    </ul>
+                    <p>Please let me know if you have any questions.</p>
+                    <p>Best regards,<br>Dr. Sarah Johnson</p>
+                </div>
+
+                <div class="message-reply">
+                    <div class="message-compose" contenteditable="true" placeholder="Type your reply..."></div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <button class="btn btn-link text-muted p-0">
+                                <i class="bi bi-paperclip"></i>
+                            </button>
+                        </div>
+                        <button class="btn btn-primary" style="background-color: #7c3aed; border: none;">
+                            Send Reply
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compose Modal -->
+    <div class="modal fade" id="composeModal" tabindex="-1" aria-labelledby="composeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="composeModalLabel">New Message</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="composeForm">
+                        <div class="mb-3">
+                            <label for="recipients" class="form-label">To</label>
+                            <input type="text" class="form-control" id="recipients" placeholder="Enter recipients...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Subject</label>
+                            <input type="text" class="form-control" id="subject" placeholder="Enter subject...">
+                        </div>
+                        <div class="mb-3">
+                            <label for="messageBody" class="form-label">Message</label>
+                            <textarea class="form-control" id="messageBody" rows="6"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" style="background-color: #7c3aed; border: none;">Send Message</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Make message items clickable
+        document.querySelectorAll('.message-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove active class from all items
+                document.querySelectorAll('.message-item').forEach(i => i.classList.remove('active'));
+                // Add active class to clicked item
+                this.classList.add('active');
+                // Remove unread status
+                this.classList.remove('unread');
+            });
+        });
+
+        // Make message compose area work like a textarea
+        const composeArea = document.querySelector('.message-compose');
+        composeArea.addEventListener('focus', function() {
+            if (!this.textContent.trim()) {
+                this.setAttribute('data-placeholder', this.getAttribute('placeholder'));
+                this.removeAttribute('placeholder');
+            }
+        });
+
+        composeArea.addEventListener('blur', function() {
+            if (!this.textContent.trim()) {
+                this.setAttribute('placeholder', this.getAttribute('data-placeholder'));
+            }
+        });
+    </script>
+</body>
+</html> 

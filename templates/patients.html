@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNest - Patients</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fe;
+        }
+        .sidebar {
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .nav-link {
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+        }
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+            font-weight: 500;
+        }
+        .profile-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        .content-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: none;
+        }
+        .search-box {
+            max-width: 400px;
+        }
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .status-active {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .status-pending {
+            background-color: #fef9c3;
+            color: #854d0e;
+        }
+        .action-btn {
+            padding: 0.25rem;
+            color: #6b7280;
+            background: none;
+            border: none;
+        }
+        .action-btn:hover {
+            color: #7c3aed;
+            background-color: #f3f4f6;
+            border-radius: 4px;
+        }
+        .table > :not(caption) > * > * {
+            padding: 1rem;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="py-4 px-4">
+            <h4 class="mb-0" style="color: #7c3aed;">CareNest</h4>
+            <p class="text-muted small">Healthcare Platform</p>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{{ url_for('patients') }}">
+                <i class="bi bi-people"></i> Patients
+            </a>
+            <a class="nav-link" href="{{ url_for('messages') }}">
+                <i class="bi bi-chat"></i> Messages
+            </a>
+            <a class="nav-link" href="{{ url_for('care_plans') }}">
+                <i class="bi bi-clipboard2-pulse"></i> Care Plans
+            </a>
+            <a class="nav-link" href="{{ url_for('goals') }}">
+                <i class="bi bi-trophy"></i> Goals
+            </a>
+            <a class="nav-link" href="{{ url_for('activities') }}">
+                <i class="bi bi-calendar3"></i> Activities
+            </a>
+            <a class="nav-link" href="{{ url_for('analytics') }}">
+                <i class="bi bi-graph-up"></i> Analytics
+            </a>
+            <a class="nav-link" href="{{ url_for('notifications') }}">
+                <i class="bi bi-bell"></i> Notifications
+            </a>
+        </nav>
+
+        <div class="profile-section">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    {{ current_user.name[0].upper() }}
+                </div>
+                <div>
+                    <div class="fw-500">{{ current_user.name }}</div>
+                    <div class="text-muted small">{{ current_user.role.title() }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-link text-muted ms-auto">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1">Patients</h4>
+                <p class="text-muted mb-0">Manage and monitor your patients</p>
+            </div>
+            <button class="btn btn-primary" style="background-color: #7c3aed; border: none;" data-bs-toggle="modal" data-bs-target="#addPatientModal">
+                <i class="bi bi-plus"></i> Add New Patient
+            </button>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search patients..." value="{{ search_term }}">
+                    <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="genderFilter">
+                    <option value="all" {% if gender_filter == 'all' %}selected{% endif %}>All Genders</option>
+                    <option value="Male" {% if gender_filter == 'Male' %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if gender_filter == 'Female' %}selected{% endif %}>Female</option>
+                    <option value="Other" {% if gender_filter == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="ageFilter">
+                    <option value="all" {% if age_filter == 'all' %}selected{% endif %}>All Ages</option>
+                    <option value="0-18" {% if age_filter == '0-18' %}selected{% endif %}>0-18 years</option>
+                    <option value="19-30" {% if age_filter == '19-30' %}selected{% endif %}>19-30 years</option>
+                    <option value="31-50" {% if age_filter == '31-50' %}selected{% endif %}>31-50 years</option>
+                    <option value="50+" {% if age_filter == '50+' %}selected{% endif %}>50+ years</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary" id="exportCSV">
+                        <i class="bi bi-file-earmark-excel"></i> CSV
+                    </button>
+                    <button class="btn btn-outline-primary" id="exportPDF">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card shadow-sm mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="search-box">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="bi bi-search text-muted"></i>
+                        </span>
+                        <input type="text" class="form-control border-start-0" placeholder="Search patients...">
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                    <button class="btn btn-outline-secondary">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Patient Name</th>
+                            <th>Age</th>
+                            <th>Contact</th>
+                            <th>Last Visit</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for patient in patients %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-person text-muted"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-500">{{ patient.first_name }} {{ patient.last_name }}</div>
+                                        <div class="text-muted small">ID: P-{{ '%03d' % patient.id }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% set age = ((now().date() - patient.date_of_birth).days / 365.25) | int %}
+                                {{ age }}
+                            </td>
+                            <td>
+                                <div>{{ patient.phone }}</div>
+                                {% if patient.email %}
+                                <div class="text-muted small">{{ patient.email }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ patient.updated_at.strftime('%b %d, %Y') }}</div>
+                                <div class="text-muted small">{{ patient.updated_at.strftime('%I:%M %p') }}</div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-active">Active</span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <button class="action-btn view-patient" title="View Details" data-id="{{ patient.id }}">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="action-btn edit-patient" title="Edit" data-id="{{ patient.id }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="action-btn delete-patient" title="Delete" data-id="{{ patient.id }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                <div class="text-muted">No patients found</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="text-muted small">
+                    Showing 1-2 of 24 patients
+                </div>
+                <nav>
+                    <ul class="pagination mb-0">
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                        <li class="page-item"><a class="page-link" href="#">2</a></li>
+                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+                        <li class="page-item">
+                            <a class="page-link" href="#"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Patient Modal -->
+    <div class="modal fade" id="addPatientModal" tabindex="-1" aria-labelledby="addPatientModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addPatientModalLabel">Add New Patient</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addPatientForm" action="{{ url_for('add_patient') }}" method="POST">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="firstName" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="firstName" name="first_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="lastName" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="lastName" name="last_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="dateOfBirth" class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" id="dateOfBirth" name="date_of_birth" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="gender" class="form-label">Gender</label>
+                                <select class="form-select" id="gender" name="gender" required>
+                                    <option value="">Select gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone" class="form-label">Phone Number</label>
+                                <input type="tel" class="form-control" id="phone" name="phone" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="email" name="email">
+                            </div>
+                            <div class="col-12">
+                                <label for="address" class="form-label">Address</label>
+                                <textarea class="form-control" id="address" name="address" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="emergencyContact" class="form-label">Emergency Contact Name</label>
+                                <input type="text" class="form-control" id="emergencyContact" name="emergency_contact">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="emergencyPhone" class="form-label">Emergency Contact Phone</label>
+                                <input type="tel" class="form-control" id="emergencyPhone" name="emergency_phone">
+                            </div>
+                            <div class="col-12">
+                                <label for="medicalHistory" class="form-label">Medical History</label>
+                                <textarea class="form-control" id="medicalHistory" name="medical_history" rows="3"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="currentMedications" class="form-label">Current Medications</label>
+                                <textarea class="form-control" id="currentMedications" name="current_medications" rows="2"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="allergies" class="form-label">Allergies</label>
+                                <textarea class="form-control" id="allergies" name="allergies" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="addPatientForm" class="btn btn-primary" id="submitPatientBtn" style="background-color: #7c3aed; border: none;">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <span class="btn-text">Add Patient</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Patient Modal -->
+    <div class="modal fade" id="viewPatientModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Patient Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="fw-bold">Name</label>
+                            <p id="viewPatientName"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Date of Birth</label>
+                            <p id="viewDateOfBirth"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Gender</label>
+                            <p id="viewGender"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Phone</label>
+                            <p id="viewPhone"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Email</label>
+                            <p id="viewEmail"></p>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold">Address</label>
+                            <p id="viewAddress"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Emergency Contact</label>
+                            <p id="viewEmergencyContact"></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold">Emergency Phone</label>
+                            <p id="viewEmergencyPhone"></p>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold">Medical History</label>
+                            <p id="viewMedicalHistory"></p>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold">Current Medications</label>
+                            <p id="viewCurrentMedications"></p>
+                        </div>
+                        <div class="col-12">
+                            <label class="fw-bold">Allergies</label>
+                            <p id="viewAllergies"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Patient Modal -->
+    <div class="modal fade" id="editPatientModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Patient</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editPatientForm" method="POST">
+                        <input type="hidden" id="editPatientId" name="patient_id">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="editFirstName" class="form-label">First Name</label>
+                                <input type="text" class="form-control" id="editFirstName" name="first_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editLastName" class="form-label">Last Name</label>
+                                <input type="text" class="form-control" id="editLastName" name="last_name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editDateOfBirth" class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" id="editDateOfBirth" name="date_of_birth" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editGender" class="form-label">Gender</label>
+                                <select class="form-select" id="editGender" name="gender" required>
+                                    <option value="">Select gender</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editPhone" class="form-label">Phone</label>
+                                <input type="tel" class="form-control" id="editPhone" name="phone" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="editEmail" name="email">
+                            </div>
+                            <div class="col-12">
+                                <label for="editAddress" class="form-label">Address</label>
+                                <textarea class="form-control" id="editAddress" name="address" rows="2"></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editEmergencyContact" class="form-label">Emergency Contact</label>
+                                <input type="text" class="form-control" id="editEmergencyContact" name="emergency_contact">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editEmergencyPhone" class="form-label">Emergency Phone</label>
+                                <input type="tel" class="form-control" id="editEmergencyPhone" name="emergency_phone">
+                            </div>
+                            <div class="col-12">
+                                <label for="editMedicalHistory" class="form-label">Medical History</label>
+                                <textarea class="form-control" id="editMedicalHistory" name="medical_history" rows="3"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="editCurrentMedications" class="form-label">Current Medications</label>
+                                <textarea class="form-control" id="editCurrentMedications" name="current_medications" rows="3"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label for="editAllergies" class="form-label">Allergies</label>
+                                <textarea class="form-control" id="editAllergies" name="allergies" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="editPatientForm" class="btn btn-primary" style="background-color: #7c3aed; border: none;">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deletePatientModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Patient</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete this patient? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('addPatientForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Clear previous alerts
+            this.querySelectorAll('.alert').forEach(alert => alert.remove());
+            
+            // Get submit button and show loading state
+            const submitBtn = document.getElementById('submitPatientBtn');
+            const spinner = submitBtn.querySelector('.spinner-border');
+            const btnText = submitBtn.querySelector('.btn-text');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            spinner.classList.remove('d-none');
+            btnText.textContent = 'Adding...';
+            
+            try {
+                // Validate required fields
+                const requiredFields = ['first_name', 'last_name', 'date_of_birth', 'gender', 'phone'];
+                let isValid = true;
+                requiredFields.forEach(field => {
+                    const input = this.querySelector(`[name="${field}"]`);
+                    if (!input.value.trim()) {
+                        isValid = false;
+                        input.classList.add('is-invalid');
+                        const feedback = document.createElement('div');
+                        feedback.className = 'invalid-feedback';
+                        feedback.textContent = 'This field is required';
+                        input.parentNode.appendChild(feedback);
+                    } else {
+                        input.classList.remove('is-invalid');
+                    }
+                });
+
+                if (!isValid) {
+                    throw new Error('Please fill in all required fields');
+                }
+                
+                const formData = new FormData(this);
+                
+                // Log form data for debugging
+                console.log('Form data being sent:');
+                for (let pair of formData.entries()) {
+                    console.log(pair[0] + ': ' + pair[1]);
+                }
+                
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('Server response:', data);
+
+                if (data.success) {
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        ${data.message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
+                    
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addPatientModal'));
+                    modal.hide();
+                    
+                    // Reset form
+                    this.reset();
+                    
+                    // Refresh the page
+                    window.location.reload();
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                // Show error message in modal
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
+                alertDiv.innerHTML = `
+                    ${error.message || 'An error occurred while adding the patient. Please try again.'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                this.insertBefore(alertDiv, this.firstChild);
+            } finally {
+                // Reset button state
+                submitBtn.disabled = false;
+                spinner.classList.add('d-none');
+                btnText.textContent = 'Add Patient';
+            }
+        });
+
+        // Clear validation states when modal is hidden
+        document.getElementById('addPatientModal').addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('addPatientForm');
+            form.reset();
+            form.querySelectorAll('.alert').forEach(alert => alert.remove());
+            form.querySelectorAll('.is-invalid').forEach(input => {
+                input.classList.remove('is-invalid');
+            });
+            form.querySelectorAll('.invalid-feedback').forEach(feedback => {
+                feedback.remove();
+            });
+        });
+
+        // Add input event listeners to clear validation states
+        document.querySelectorAll('#addPatientForm input, #addPatientForm select').forEach(input => {
+            input.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+                const feedback = this.parentNode.querySelector('.invalid-feedback');
+                if (feedback) {
+                    feedback.remove();
+                }
+            });
+        });
+
+        // View Patient
+        document.querySelectorAll('.view-patient').forEach(button => {
+            button.addEventListener('click', async function() {
+                const patientId = this.dataset.id;
+                try {
+                    const response = await fetch(`/api/patient/${patientId}`);
+                    const data = await response.json();
+                    
+                    // Populate modal with patient data
+                    document.getElementById('viewPatientName').textContent = `${data.first_name} ${data.last_name}`;
+                    document.getElementById('viewDateOfBirth').textContent = data.date_of_birth;
+                    document.getElementById('viewGender').textContent = data.gender;
+                    document.getElementById('viewPhone').textContent = data.phone;
+                    document.getElementById('viewEmail').textContent = data.email || 'Not provided';
+                    document.getElementById('viewAddress').textContent = data.address || 'Not provided';
+                    document.getElementById('viewEmergencyContact').textContent = data.emergency_contact || 'Not provided';
+                    document.getElementById('viewEmergencyPhone').textContent = data.emergency_phone || 'Not provided';
+                    document.getElementById('viewMedicalHistory').textContent = data.medical_history || 'No medical history recorded';
+                    document.getElementById('viewCurrentMedications').textContent = data.current_medications || 'No current medications';
+                    document.getElementById('viewAllergies').textContent = data.allergies || 'No known allergies';
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('viewPatientModal'));
+                    modal.show();
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to load patient details');
+                }
+            });
+        });
+
+        // Edit Patient
+        document.querySelectorAll('.edit-patient').forEach(button => {
+            button.addEventListener('click', async function() {
+                const patientId = this.dataset.id;
+                try {
+                    const response = await fetch(`/api/patient/${patientId}`);
+                    const data = await response.json();
+                    
+                    // Populate form with patient data
+                    document.getElementById('editPatientId').value = patientId;
+                    document.getElementById('editFirstName').value = data.first_name;
+                    document.getElementById('editLastName').value = data.last_name;
+                    document.getElementById('editDateOfBirth').value = data.date_of_birth;
+                    document.getElementById('editGender').value = data.gender;
+                    document.getElementById('editPhone').value = data.phone;
+                    document.getElementById('editEmail').value = data.email || '';
+                    document.getElementById('editAddress').value = data.address || '';
+                    document.getElementById('editEmergencyContact').value = data.emergency_contact || '';
+                    document.getElementById('editEmergencyPhone').value = data.emergency_phone || '';
+                    document.getElementById('editMedicalHistory').value = data.medical_history || '';
+                    document.getElementById('editCurrentMedications').value = data.current_medications || '';
+                    document.getElementById('editAllergies').value = data.allergies || '';
+                    
+                    // Show modal
+                    const modal = new bootstrap.Modal(document.getElementById('editPatientModal'));
+                    modal.show();
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to load patient details');
+                }
+            });
+        });
+
+        // Delete Patient
+        let patientToDelete = null;
+        document.querySelectorAll('.delete-patient').forEach(button => {
+            button.addEventListener('click', function() {
+                patientToDelete = this.dataset.id;
+                const modal = new bootstrap.Modal(document.getElementById('deletePatientModal'));
+                modal.show();
+            });
+        });
+
+        document.getElementById('confirmDelete').addEventListener('click', async function() {
+            if (!patientToDelete) return;
+            
+            try {
+                const response = await fetch(`/api/patient/${patientToDelete}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('deletePatientModal'));
+                    modal.hide();
+                    
+                    // Show success message and refresh page
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        Patient deleted successfully
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
+                    
+                    // Refresh the page after a short delay
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to delete patient');
+            }
+        });
+
+        // Handle edit form submission
+        document.getElementById('editPatientForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const patientId = document.getElementById('editPatientId').value;
+            
+            try {
+                const response = await fetch(`/api/patient/${patientId}`, {
+                    method: 'PUT',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editPatientModal'));
+                    modal.hide();
+                    
+                    // Show success message and refresh page
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        Patient updated successfully
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
+                    
+                    // Refresh the page after a short delay
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update patient');
+            }
+        });
+
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const patients = document.querySelectorAll('.patient-card');
+            
+            patients.forEach(patient => {
+                const name = patient.querySelector('.patient-name').textContent.toLowerCase();
+                const email = patient.querySelector('.patient-email')?.textContent.toLowerCase() || '';
+                const phone = patient.querySelector('.patient-phone')?.textContent.toLowerCase() || '';
+                
+                if (name.includes(searchTerm) || 
+                    email.includes(searchTerm) || 
+                    phone.includes(searchTerm)) {
+                    patient.style.display = 'block';
+                } else {
+                    patient.style.display = 'none';
+                }
+            });
+        });
+
+        // Filter functionality
+        document.getElementById('genderFilter').addEventListener('change', function() {
+            applyFilters();
+        });
+
+        document.getElementById('ageFilter').addEventListener('change', function() {
+            applyFilters();
+        });
+
+        function applyFilters() {
+            const genderFilter = document.getElementById('genderFilter').value;
+            const ageFilter = document.getElementById('ageFilter').value;
+            const searchTerm = document.getElementById('searchInput').value;
+            
+            // Update URL with filters
+            const params = new URLSearchParams(window.location.search);
+            params.set('gender', genderFilter);
+            params.set('age', ageFilter);
+            if (searchTerm) params.set('search', searchTerm);
+            
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        }
+
+        // Export to CSV
+        document.getElementById('exportCSV').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/patients/export?' + new URLSearchParams(window.location.search));
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message);
+                }
+                
+                let csvContent = "data:text/csv;charset=utf-8,";
+                
+                // Add headers
+                csvContent += "First Name,Last Name,Date of Birth,Age,Gender,Phone,Email,Address,Emergency Contact,Emergency Phone,Medical History,Current Medications,Allergies\n";
+                
+                // Add data
+                data.data.forEach(patient => {
+                    const row = [
+                        `"${patient.first_name.replace(/"/g, '""')}"`,
+                        `"${patient.last_name.replace(/"/g, '""')}"`,
+                        `"${patient.date_of_birth}"`,
+                        `"${patient.age}"`,
+                        `"${patient.gender}"`,
+                        `"${patient.phone.replace(/"/g, '""')}"`,
+                        `"${patient.email.replace(/"/g, '""')}"`,
+                        `"${patient.address.replace(/"/g, '""')}"`,
+                        `"${patient.emergency_contact.replace(/"/g, '""')}"`,
+                        `"${patient.emergency_phone.replace(/"/g, '""')}"`,
+                        `"${patient.medical_history.replace(/"/g, '""')}"`,
+                        `"${patient.current_medications.replace(/"/g, '""')}"`,
+                        `"${patient.allergies.replace(/"/g, '""')}"`
+                    ].join(',');
+                    
+                    csvContent += row + "\n";
+                });
+                
+                // Create download link
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "patients.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to export patients: ' + error.message);
+            }
+        });
+
+        // Export to PDF
+        document.getElementById('exportPDF').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/patients/export?' + new URLSearchParams(window.location.search));
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message);
+                }
+                
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(16);
+                doc.text('Patients Report', 14, 15);
+                
+                // Add date
+                doc.setFontSize(10);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+                
+                // Add table headers
+                const headers = ['Name', 'Age', 'Gender', 'Phone', 'Email', 'Address'];
+                let y = 35;
+                
+                doc.setFontSize(10);
+                headers.forEach((header, i) => {
+                    doc.text(header, 14 + (i * 32), y);
+                });
+                
+                y += 10;
+                
+                // Add patient data
+                data.data.forEach(patient => {
+                    if (y > 280) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    
+                    const name = `${patient.first_name} ${patient.last_name}`;
+                    const age = patient.age;
+                    const gender = patient.gender;
+                    const phone = patient.phone;
+                    const email = patient.email;
+                    const address = patient.address;
+                    
+                    doc.text(name, 14, y);
+                    doc.text(age.toString(), 46, y);
+                    doc.text(gender, 78, y);
+                    doc.text(phone, 110, y);
+                    doc.text(email, 142, y);
+                    doc.text(address, 174, y);
+                    
+                    y += 10;
+                });
+                
+                // Save the PDF
+                doc.save('patients.pdf');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to export patients: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html> 
