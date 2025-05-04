@@ -172,7 +172,7 @@
     <div class="sidebar">
         <div class="py-4 px-4">
             <h4 class="mb-0" style="color: #7c3aed;">CareNest</h4>
-            <p class="text-muted small">Healthcare Platform</p>
+            <p class="text-muted small">Healthcare Platform<br>Developed by AI</p>
         </div>
         
         <nav class="nav flex-column">
@@ -500,7 +500,12 @@
                             </div>
                             <div class="col-md-12">
                                 <label for="doctor_name" class="form-label">Doctor Name</label>
-                                <input type="text" class="form-control" id="doctor_name" name="doctor_name">
+                                <select class="form-select" id="doctor_name" name="doctor_name" required>
+                                    <option value="">Select doctor</option>
+                                    {% for doctor in doctors %}
+                                    <option value="{{ doctor.name }}">{{ doctor.name }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                             <div class="col-md-12">
                                 <label for="status" class="form-label">Status</label>
@@ -586,7 +591,12 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Doctor</label>
-                                <input type="text" class="form-control" name="doctor_name" id="editDoctor">
+                                <select class="form-select" name="doctor_name" id="editDoctor" required>
+                                    <option value="">Select doctor</option>
+                                    {% for doctor in doctors %}
+                                    <option value="{{ doctor.name }}">{{ doctor.name }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Location</label>

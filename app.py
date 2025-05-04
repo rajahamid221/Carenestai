@@ -726,11 +726,15 @@ def activities():
         # Get all patients for the schedule activity form
         patients = Patient.query.all()
         
+        # Get all doctors for the schedule activity form
+        doctors = User.query.filter_by(role='doctor').all()
+        
         return render_template('activities.html', 
             current_month=current_month,
             activities_by_date=activities_by_date,
             all_activities=all_activities,
             patients=patients,
+            doctors=doctors,
             status_filter=status_filter or 'all',
             activity_type=activity_type,
             search_term=search_term
@@ -742,6 +746,7 @@ def activities():
             activities_by_date={},
             all_activities=[],
             patients=[],
+            doctors=[],
             status_filter='all',
             activity_type='all',
             search_term='',

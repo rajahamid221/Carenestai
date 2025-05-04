@@ -22,8 +22,14 @@ wheels/
 
 # Virtual Environment
 venv/
-env/
 ENV/
+env/
+.env
+
+# Flask
+instance/
+.webassets-cache
+*.db
 
 # IDE
 .idea/
@@ -31,8 +37,24 @@ ENV/
 *.swp
 *.swo
 
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Local development settings
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
 # Environment variables
-.env
+.env.local
+
+# Environment variables
 .env.local
 
 # Logs
