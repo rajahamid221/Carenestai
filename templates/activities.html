@@ -826,7 +826,7 @@
 
         // Calendar functionality
         let currentDate = new Date('{{ current_month.strftime("%Y-%m-%d") }}');
-        const activitiesByDate = {{ activities_by_date | tojson | safe }};
+        const activitiesByDate = /* {{ activities_by_date | tojson | safe }} */ {};
         
         function updateCalendarTitle() {
             document.querySelector('.calendar-header h5').textContent = 
@@ -878,7 +878,7 @@
                         activityElement.title = `${activity.title}
 Doctor: ${activity.doctor_name || 'Not specified'}
 Location: ${activity.location || 'Not specified'}`;
-                        activityElement.onclick = () => viewAppointment(activity.id);
+                        activityElement.onclick = function() { viewAppointment(activity.id); };
                         activitiesContainer.appendChild(activityElement);
                     });
                     
@@ -1317,42 +1317,79 @@ Location: ${activity.location || 'Not specified'}`;
 
         // Export to CSV
         document.getElementById('exportCSV').addEventListener('click', function() {
+            // Get current month's start and end dates
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+            
+            // Format dates for comparison
+            const formatDate = (date) => {
+                return date.toISOString().split('T')[0];
+            };
+            
             const activities = document.querySelectorAll('.activity-card');
             let csvContent = "data:text/csv;charset=utf-8,";
             
             // Add headers
-            csvContent += "Title,Description,Date,Time,Type,Doctor,Location,Status\n";
+            csvContent += "Title,Doctor,Date,Time,Location,Status\n";
             
             activities.forEach(activity => {
-                const title = activity.querySelector('h6').textContent;
-                const description = activity.querySelector('.text-muted').textContent;
-                const date = activity.querySelector('.date').textContent;
-                const time = activity.querySelector('.time').textContent;
-                const type = activity.dataset.type;
-                const doctor = activity.querySelector('.doctor-name')?.textContent || '';
-                const location = activity.querySelector('.location')?.textContent || '';
-                const status = activity.querySelector('.status-badge').textContent;
-                
-                // Escape commas and quotes
-                const row = [
-                    `"${title.replace(/"/g, '""')}"`,
-                    `"${description.replace(/"/g, '""')}"`,
-                    `"${date}"`,
-                    `"${time}"`,
-                    `"${type}"`,
-                    `"${doctor.replace(/"/g, '""')}"`,
-                    `"${location.replace(/"/g, '""')}"`,
-                    `"${status}"`
-                ].join(',');
-                
-                csvContent += row + "\n";
+                try {
+                    // Get date from the activity using safer selector pattern
+                    const dateTimeElements = activity?.querySelectorAll('.text-end .small');
+                    const dateElement = dateTimeElements?.[0];
+                    const dateStr = dateElement ? dateElement.textContent.trim() : 'N/A';
+                    
+                    // Parse the date string (format: "Month DD, YYYY")
+                    const activityDate = new Date(dateStr);
+                    
+                    // Check if the activity is within the current month
+                    if (activityDate >= firstDay && activityDate <= lastDay) {
+                        // Get data with fallbacks using safer selector pattern
+                        const titleElement = activity?.querySelector('h6');
+                        const title = titleElement ? titleElement.textContent.trim() : 'N/A';
+                        
+                        const doctorElement = activity?.querySelector('.text-muted.small');
+                        const doctor = doctorElement ? doctorElement.textContent.trim() : 'N/A';
+                        
+                        const timeElement = dateTimeElements?.[1];
+                        const time = timeElement ? timeElement.textContent.trim() : 'N/A';
+                        
+                        const locationElement = activity?.querySelector('.d-flex.align-items-center.gap-3 .small:last-child');
+                        const location = locationElement ? locationElement.textContent.trim() : 'N/A';
+                        
+                        const statusElement = activity?.querySelector('.status-badge');
+                        const status = statusElement ? statusElement.textContent.trim() : 'N/A';
+                        
+                        // Format date for CSV
+                        const formattedDate = activityDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit'
+                        });
+                        
+                        // Escape commas and quotes
+                        const row = [
+                            `"${title.replace(/"/g, '""')}"`,
+                            `"${doctor.replace(/"/g, '""')}"`,
+                            `"${formattedDate}"`,
+                            `"${time}"`,
+                            `"${location.replace(/"/g, '""')}"`,
+                            `"${status}"`
+                        ].join(',');
+                        
+                        csvContent += row + "\n";
+                    }
+                } catch (error) {
+                    console.error('Error processing activity:', error);
+                }
             });
             
             // Create download link
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "activities.csv");
+            link.setAttribute("download", `activities_${formatDate(firstDay)}_to_${formatDate(lastDay)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -1372,7 +1409,7 @@ Location: ${activity.location || 'Not specified'}`;
             doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
             
             // Add table headers
-            const headers = ['Title', 'Date', 'Time', 'Type', 'Doctor', 'Location', 'Status'];
+            const headers = ['Title', 'Doctor', 'Date', 'Time', 'Location', 'Status'];
             let y = 35;
             
             doc.setFontSize(10);
@@ -1384,28 +1421,45 @@ Location: ${activity.location || 'Not specified'}`;
             
             // Add activity data
             activities.forEach(activity => {
-                if (y > 280) {
-                    doc.addPage();
-                    y = 20;
+                try {
+                    if (y > 280) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    
+                    // Get data with fallbacks using safer selector pattern
+                    const titleElement = activity?.querySelector('h6');
+                    const title = titleElement ? titleElement.textContent.trim() : 'N/A';
+                    
+                    const doctorElement = activity?.querySelector('.text-muted.small');
+                    const doctor = doctorElement ? doctorElement.textContent.trim() : 'N/A';
+                    
+                    // Get date and time from the text-end div
+                    const dateTimeElements = activity?.querySelectorAll('.text-end .small');
+                    const dateElement = dateTimeElements?.[0];
+                    const timeElement = dateTimeElements?.[1];
+                    
+                    const date = dateElement ? dateElement.textContent.trim() : 'N/A';
+                    const time = timeElement ? timeElement.textContent.trim() : 'N/A';
+                    
+                    const locationElement = activity?.querySelector('.d-flex.align-items-center.gap-3 .small:last-child');
+                    const location = locationElement ? locationElement.textContent.trim() : 'N/A';
+                    
+                    const statusElement = activity?.querySelector('.status-badge');
+                    const status = statusElement ? statusElement.textContent.trim() : 'N/A';
+                    
+                    // Add data to PDF
+                    doc.text(title, 14, y);
+                    doc.text(doctor, 41, y);
+                    doc.text(date, 68, y);
+                    doc.text(time, 95, y);
+                    doc.text(location, 122, y);
+                    doc.text(status, 149, y);
+                    
+                    y += 10;
+                } catch (error) {
+                    console.error('Error processing activity for PDF:', error);
                 }
-                
-                const title = activity.querySelector('h6').textContent;
-                const date = activity.querySelector('.date').textContent;
-                const time = activity.querySelector('.time').textContent;
-                const type = activity.dataset.type;
-                const doctor = activity.querySelector('.doctor-name')?.textContent || '';
-                const location = activity.querySelector('.location')?.textContent || '';
-                const status = activity.querySelector('.status-badge').textContent;
-                
-                doc.text(title, 14, y);
-                doc.text(date, 41, y);
-                doc.text(time, 68, y);
-                doc.text(type, 95, y);
-                doc.text(doctor, 122, y);
-                doc.text(location, 149, y);
-                doc.text(status, 176, y);
-                
-                y += 10;
             });
             
             // Save the PDF

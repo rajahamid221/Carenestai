@@ -187,25 +187,6 @@
         </div>
 
         <div class="content-card shadow-sm mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div class="search-box">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0">
-                            <i class="bi bi-search text-muted"></i>
-                        </span>
-                        <input type="text" class="form-control border-start-0" placeholder="Search patients...">
-                    </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary">
-                        <i class="bi bi-funnel"></i> Filter
-                    </button>
-                    <button class="btn btn-outline-secondary">
-                        <i class="bi bi-download"></i> Export
-                    </button>
-                </div>
-            </div>
-
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
                     <thead class="table-light">
@@ -856,39 +837,65 @@
         }
 
         // Export to CSV
-        document.getElementById('exportCSV').addEventListener('click', async function() {
+        document.getElementById('exportCSV').addEventListener('click', function() {
             try {
-                const response = await fetch('/api/patients/export?' + new URLSearchParams(window.location.search));
-                const data = await response.json();
-                
-                if (!data.success) {
-                    throw new Error(data.message);
+                const patients = document.querySelectorAll('tbody tr');
+                console.log('Found patients:', patients.length); // Debug log
+
+                if (!patients || patients.length === 0) {
+                    throw new Error('No patient data found to export');
                 }
-                
+
                 let csvContent = "data:text/csv;charset=utf-8,";
                 
                 // Add headers
-                csvContent += "First Name,Last Name,Date of Birth,Age,Gender,Phone,Email,Address,Emergency Contact,Emergency Phone,Medical History,Current Medications,Allergies\n";
+                csvContent += "Name,Age,Contact,Last Visit,Status\n";
                 
-                // Add data
-                data.data.forEach(patient => {
-                    const row = [
-                        `"${patient.first_name.replace(/"/g, '""')}"`,
-                        `"${patient.last_name.replace(/"/g, '""')}"`,
-                        `"${patient.date_of_birth}"`,
-                        `"${patient.age}"`,
-                        `"${patient.gender}"`,
-                        `"${patient.phone.replace(/"/g, '""')}"`,
-                        `"${patient.email.replace(/"/g, '""')}"`,
-                        `"${patient.address.replace(/"/g, '""')}"`,
-                        `"${patient.emergency_contact.replace(/"/g, '""')}"`,
-                        `"${patient.emergency_phone.replace(/"/g, '""')}"`,
-                        `"${patient.medical_history.replace(/"/g, '""')}"`,
-                        `"${patient.current_medications.replace(/"/g, '""')}"`,
-                        `"${patient.allergies.replace(/"/g, '""')}"`
-                    ].join(',');
-                    
-                    csvContent += row + "\n";
+                patients.forEach((patient, index) => {
+                    try {
+                        console.log(`Processing patient ${index + 1}`); // Debug log
+
+                        // Get data with fallbacks using safer selector pattern
+                        const nameElement = patient.querySelector('td:nth-child(1) .fw-500');
+                        console.log('Name element:', nameElement); // Debug log
+                        const name = nameElement ? (nameElement.textContent || '').trim() : 'N/A';
+                        
+                        const ageElement = patient.querySelector('td:nth-child(2)');
+                        console.log('Age element:', ageElement); // Debug log
+                        const age = ageElement ? (ageElement.textContent || '').trim() : 'N/A';
+                        
+                        const contactElement = patient.querySelector('td:nth-child(3)');
+                        console.log('Contact element:', contactElement); // Debug log
+                        const contact = contactElement ? (contactElement.textContent || '').trim() : 'N/A';
+                        
+                        const lastVisitElement = patient.querySelector('td:nth-child(4)');
+                        console.log('Last visit element:', lastVisitElement); // Debug log
+                        const lastVisit = lastVisitElement ? (lastVisitElement.textContent || '').trim() : 'N/A';
+                        
+                        const statusElement = patient.querySelector('.status-badge');
+                        console.log('Status element:', statusElement); // Debug log
+                        const status = statusElement ? (statusElement.textContent || '').trim() : 'N/A';
+                        
+                        // Safely escape values
+                        const safeName = typeof name === 'string' ? name.replace(/"/g, '""') : 'N/A';
+                        const safeContact = typeof contact === 'string' ? contact.replace(/"/g, '""') : 'N/A';
+                        
+                        // Create row with safe values
+                        const row = [
+                            `"${safeName}"`,
+                            `"${age}"`,
+                            `"${safeContact}"`,
+                            `"${lastVisit}"`,
+                            `"${status}"`
+                        ].join(',');
+                        
+                        console.log('Generated row:', row); // Debug log
+                        csvContent += row + "\n";
+                    } catch (error) {
+                        console.error(`Error processing patient row ${index + 1}:`, error);
+                        // Add a row with error information
+                        csvContent += '"Error processing row","N/A","N/A","N/A","N/A"\n';
+                    }
                 });
                 
                 // Create download link
@@ -900,72 +907,74 @@
                 link.click();
                 document.body.removeChild(link);
             } catch (error) {
-                console.error('Error:', error);
+                console.error('Export error:', error);
                 alert('Failed to export patients: ' + error.message);
             }
         });
 
         // Export to PDF
-        document.getElementById('exportPDF').addEventListener('click', async function() {
-            try {
-                const response = await fetch('/api/patients/export?' + new URLSearchParams(window.location.search));
-                const data = await response.json();
-                
-                if (!data.success) {
-                    throw new Error(data.message);
-                }
-                
-                const doc = new jsPDF();
-                
-                // Add title
-                doc.setFontSize(16);
-                doc.text('Patients Report', 14, 15);
-                
-                // Add date
-                doc.setFontSize(10);
-                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
-                
-                // Add table headers
-                const headers = ['Name', 'Age', 'Gender', 'Phone', 'Email', 'Address'];
-                let y = 35;
-                
-                doc.setFontSize(10);
-                headers.forEach((header, i) => {
-                    doc.text(header, 14 + (i * 32), y);
-                });
-                
-                y += 10;
-                
-                // Add patient data
-                data.data.forEach(patient => {
+        document.getElementById('exportPDF').addEventListener('click', function() {
+            const patients = document.querySelectorAll('tbody tr');
+            const doc = new jsPDF();
+            
+            // Add title
+            doc.setFontSize(16);
+            doc.text('Patients Report', 14, 15);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+            
+            // Add table headers
+            const headers = ['Name', 'Age', 'Contact', 'Last Visit', 'Status'];
+            let y = 35;
+            
+            doc.setFontSize(10);
+            headers.forEach((header, i) => {
+                doc.text(header, 14 + (i * 38), y);
+            });
+            
+            y += 10;
+            
+            // Add patient data
+            patients.forEach(patient => {
+                try {
                     if (y > 280) {
                         doc.addPage();
                         y = 20;
                     }
                     
-                    const name = `${patient.first_name} ${patient.last_name}`;
-                    const age = patient.age;
-                    const gender = patient.gender;
-                    const phone = patient.phone;
-                    const email = patient.email;
-                    const address = patient.address;
+                    // Get data with fallbacks using safer selector pattern
+                    const nameElement = patient?.querySelector('td:nth-child(1) .fw-500');
+                    const name = nameElement ? nameElement.textContent.trim() : 'N/A';
                     
+                    const ageElement = patient?.querySelector('td:nth-child(2)');
+                    const age = ageElement ? ageElement.textContent.trim() : 'N/A';
+                    
+                    const contactElement = patient?.querySelector('td:nth-child(3)');
+                    const contact = contactElement ? contactElement.textContent.trim() : 'N/A';
+                    
+                    const lastVisitElement = patient?.querySelector('td:nth-child(4)');
+                    const lastVisit = lastVisitElement ? lastVisitElement.textContent.trim() : 'N/A';
+                    
+                    const statusElement = patient?.querySelector('.status-badge');
+                    const status = statusElement ? statusElement.textContent.trim() : 'N/A';
+                    
+                    // Add data to PDF
                     doc.text(name, 14, y);
-                    doc.text(age.toString(), 46, y);
-                    doc.text(gender, 78, y);
-                    doc.text(phone, 110, y);
-                    doc.text(email, 142, y);
-                    doc.text(address, 174, y);
+                    doc.text(age, 52, y);
+                    doc.text(contact, 90, y);
+                    doc.text(lastVisit, 128, y);
+                    doc.text(status, 166, y);
                     
                     y += 10;
-                });
-                
-                // Save the PDF
-                doc.save('patients.pdf');
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Failed to export patients: ' + error.message);
-            }
+                } catch (error) {
+                    console.error('Error processing patient for PDF:', error);
+                }
+            });
+            
+            // Save the PDF
+            doc.save('patients.pdf');
         });
     </script>
 </body>
