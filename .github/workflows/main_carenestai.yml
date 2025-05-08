@@ -2,7 +2,7 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - carenesthealth
+name: Build and deploy Python app to Azure Web App - Carenestai
 
 on:
   push:
@@ -68,14 +68,14 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_590A3F04CDD948DCB09C9FFB9D71BCF6 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BB0D8957A72F4FC29B524DE8F9A1545A }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_1F9B927D28B14E938EA3D1714B796FCF }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_118B5504275045308038D0111F715077 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_7A14F529963140D3944FA86C88C3C9EE }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6C8F419B5D554E3AB7903DE17CCA9564 }}
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'carenesthealth'
+          app-name: 'Carenestai'
           slot-name: 'Production'
           
