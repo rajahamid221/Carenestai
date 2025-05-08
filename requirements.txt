@@ -10,5 +10,4 @@ Werkzeug==2.3.7
 SQLAlchemy==1.4.41
 google-auth==2.22.0
 google-auth-oauthlib==1.0.0
-email-validator==2.0.0
-gunicorn==21.2.0 
+email-validator==2.0.0 

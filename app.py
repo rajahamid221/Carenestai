@@ -15,24 +15,9 @@ from sqlalchemy import func
 load_dotenv()
 
 app = Flask(__name__)
-
-# Configure database path based on environment
-if 'WEBSITE_HOSTNAME' in os.environ:
-    # Azure App Service environment
-    db_path = os.path.join('/home/site/wwwroot/instance', 'app.db')
-    app.config['SQLITE_DB_PATH'] = db_path
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-else:
-    # Local development environment
-    db_path = os.path.join('instance', 'app.db')
-    app.config['SQLITE_DB_PATH'] = db_path
-    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
-
-# Ensure instance directory exists
-os.makedirs(os.path.dirname(db_path), exist_ok=True)
-
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///healthcare.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
 
 # Google OAuth2 config
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -125,15 +110,16 @@ class Activity(db.Model):
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text)
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
-    care_plan_id = db.Column(db.Integer, db.ForeignKey('care_plan.id'))
+    care_plan_id = db.Column(db.Integer, db.ForeignKey('care_plan.id'), nullable=True)
     goal_id = db.Column(db.Integer, db.ForeignKey('goal.id'), nullable=True)
     scheduled_date = db.Column(db.DateTime, nullable=False)
     duration = db.Column(db.Integer)  # Duration in minutes
-    activity_type = db.Column(db.String(50), nullable=False, default='appointment')
+    activity_type = db.Column(db.String(50), nullable=False)
     location = db.Column(db.String(100))
     doctor_name = db.Column(db.String(100))
     enable_reminder = db.Column(db.Boolean, default=True)
     status = db.Column(db.String(20), default='scheduled')  # scheduled, in_progress, completed, cancelled
+    notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -691,6 +677,7 @@ def add_goal():
         })
 
 @app.route('/activities')
+@login_required
 def activities():
     try:
         # Get current month for calendar
@@ -739,7 +726,7 @@ def activities():
             })
         
         # Get all patients for the schedule activity form
-        patients = Patient.query.all()
+        patients = Patient.query.order_by(Patient.first_name).all()
         
         # Get all doctors for the schedule activity form
         doctors = User.query.filter_by(role='doctor').all()
@@ -1448,18 +1435,34 @@ def export_patients():
             'message': str(e)
         }), 500
 
-def init_db():
-    """Initialize the database and run migrations."""
-    with app.app_context():
-        # Run database migrations
-        from flask_migrate import upgrade
-        upgrade()
-
-# Run migrations on startup
-init_db()
-
-# Import and register blueprints
-from routes import *
-
 if __name__ == '__main__':
+    with app.app_context():
+        # Drop and recreate all tables
+        db.drop_all()
+        db.create_all()
+        
+        # Create a test user if none exists
+        if not User.query.first():
+            test_user = User(
+                email='test@example.com',
+                name='Test User',
+                role='doctor'
+            )
+            test_user.set_password('password')
+            db.session.add(test_user)
+        
+        # Create a test patient if none exists
+        if not Patient.query.first():
+            test_patient = Patient(
+                first_name='John',
+                last_name='Doe',
+                date_of_birth=datetime(1990, 1, 1).date(),
+                gender='Male',
+                phone='123-456-7890',
+                email='john.doe@example.com'
+            )
+            db.session.add(test_patient)
+        
+        db.session.commit()
+    
     app.run(debug=True) 
