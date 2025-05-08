@@ -15,9 +15,24 @@ from sqlalchemy import func
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///healthcare.db'
+
+# Configure database path based on environment
+if 'WEBSITE_HOSTNAME' in os.environ:
+    # Azure App Service environment
+    db_path = os.path.join('/home/site/wwwroot/instance', 'app.db')
+    app.config['SQLITE_DB_PATH'] = db_path
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+else:
+    # Local development environment
+    db_path = os.path.join('instance', 'app.db')
+    app.config['SQLITE_DB_PATH'] = db_path
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
+
+# Ensure instance directory exists
+os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev')
 
 # Google OAuth2 config
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -1433,34 +1448,18 @@ def export_patients():
             'message': str(e)
         }), 500
 
-if __name__ == '__main__':
+def init_db():
+    """Initialize the database and run migrations."""
     with app.app_context():
-        # Drop and recreate all tables
-        db.drop_all()
-        db.create_all()
-        
-        # Create a test user if none exists
-        if not User.query.first():
-            test_user = User(
-                email='test@example.com',
-                name='Test User',
-                role='doctor'
-            )
-            test_user.set_password('password')
-            db.session.add(test_user)
-        
-        # Create a test patient if none exists
-        if not Patient.query.first():
-            test_patient = Patient(
-                first_name='John',
-                last_name='Doe',
-                date_of_birth=datetime(1990, 1, 1).date(),
-                gender='Male',
-                phone='123-456-7890',
-                email='john.doe@example.com'
-            )
-            db.session.add(test_patient)
-        
-        db.session.commit()
-    
+        # Run database migrations
+        from flask_migrate import upgrade
+        upgrade()
+
+# Run migrations on startup
+init_db()
+
+# Import and register blueprints
+from routes import *
+
+if __name__ == '__main__':
     app.run(debug=True) 
