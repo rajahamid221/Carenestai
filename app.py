@@ -1437,8 +1437,7 @@ def export_patients():
 
 if __name__ == '__main__':
     with app.app_context():
-        # Drop and recreate all tables
-        db.drop_all()
+        # Create all database tables
         db.create_all()
         
         # Create a test user if none exists
