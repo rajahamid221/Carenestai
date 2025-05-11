@@ -163,6 +163,55 @@
             border-color: #7c3aed;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
+        .calendar-day-header {
+            text-align: center;
+            font-weight: 500;
+            padding: 0.5rem;
+            background-color: #f8f9fe;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .calendar-day {
+            background-color: white;
+            border-radius: 8px;
+            padding: 0.5rem;
+            min-height: 120px;
+            border: 1px solid #e5e7eb;
+        }
+        .calendar-day.today {
+            border: 2px solid #7c3aed;
+        }
+        .calendar-day.other-month {
+            background-color: #f8f9fe;
+            color: #9ca3af;
+        }
+        .activity-item {
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            background-color: #f3f4f6;
+            border-left: 3px solid #7c3aed;
+        }
+        .activity-item:hover {
+            background-color: #e5e7eb;
+        }
+        .activity-time {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+        .activity-title {
+            font-weight: 500;
+            color: #374151;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -561,6 +610,27 @@
                         <input type="hidden" id="editActivityId" name="id">
                         <div class="row g-3">
                             <div class="col-md-12">
+                                <label for="editPatient" class="form-label">Patient</label>
+                                <select class="form-select" id="editPatient" name="patient_id" required>
+                                    <option value="">Select patient</option>
+                                    {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.first_name }} {{ patient.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="editCarePlan" class="form-label">Care Plan</label>
+                                <select class="form-select" id="editCarePlan" name="care_plan_id" required>
+                                    <option value="">Select care plan</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label for="editGoal" class="form-label">Related Goal</label>
+                                <select class="form-select" id="editGoal" name="goal_id">
+                                    <option value="">Select goal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
                                 <label class="form-label">Title</label>
                                 <input type="text" class="form-control" name="title" id="editTitle" required>
                             </div>
@@ -626,6 +696,61 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+    // Global function for updating activity
+    function updateActivity() {
+        const form = document.getElementById('editActivityForm');
+        const formData = new FormData(form);
+        const id = formData.get('id');
+        const activityDate = formData.get('activity_date');
+        const activityTime = formData.get('activity_time');
+        const scheduledDate = new Date(`${activityDate}T${activityTime}`);
+        
+        const data = {
+            title: formData.get('title'),
+            description: formData.get('description'),
+            scheduled_date: scheduledDate.toISOString(),
+            duration: parseInt(formData.get('duration')),
+            activity_type: formData.get('activity_type'),
+            doctor_name: formData.get('doctor_name'),
+            location: formData.get('location'),
+            status: formData.get('status'),
+            patient_id: formData.get('patient_id'),
+            care_plan_id: formData.get('care_plan_id'),
+            goal_id: formData.get('goal_id')
+        };
+
+        fetch(`/api/activity/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('editActivityModal'));
+                modal.hide();
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                alertDiv.innerHTML = `
+                    ${result.message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.calendar-header'));
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                throw new Error(result.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to update activity: ' + error.message);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Add event listener for Schedule Activity button
         document.querySelector('.btn-primary').addEventListener('click', function() {
@@ -688,116 +813,86 @@
         });
 
         // Handle form submission
-        document.getElementById('scheduleActivityForm').addEventListener('submit', async function(e) {
+        document.getElementById('scheduleActivityForm').addEventListener('submit', function(e) {
             e.preventDefault();
+            const formData = new FormData(this);
             
+            // Convert FormData to JSON object
+            const jsonData = {};
+            formData.forEach((value, key) => {
+                jsonData[key] = value;
+            });
+            
+            // Combine date and time for scheduled_date
+            const date = formData.get('activity_date');
+            const time = formData.get('activity_time');
+            if (date && time) {
+                jsonData.scheduled_date = new Date(`${date}T${time}`).toISOString();
+            }
+            
+            // Remove the separate date and time fields
+            delete jsonData.activity_date;
+            delete jsonData.activity_time;
+            
+            // Ensure required fields are present
+            if (!jsonData.title || !jsonData.scheduled_date) {
+                alert('Title and scheduled date are required.');
+                return;
+            }
+            
+            // Show loading state
             const submitBtn = document.getElementById('submitActivityBtn');
             const spinner = submitBtn.querySelector('.spinner-border');
             const btnText = submitBtn.querySelector('.btn-text');
-            
-            submitBtn.disabled = true;
             spinner.classList.remove('d-none');
-            btnText.textContent = this.getAttribute('data-mode') === 'edit' ? 'Saving...' : 'Scheduling...';
+            btnText.textContent = 'Saving...';
             
-            try {
-                // Determine if this is an edit or new activity
-                const mode = this.getAttribute('data-mode');
-                const activityId = this.getAttribute('data-activity-id');
-                
-                let url = this.action;
-                let method = 'POST';
-                
-                if (mode === 'edit' && activityId) {
-                    url = `/api/activity/${activityId}`;
-                    method = 'PUT';
-                }
-                
-                // Collect form data
-                const formData = new FormData(this);
-                
-                // Log form data for debugging
-                console.log('Form data before submission:');
-                for (let [key, value] of formData.entries()) {
-                    console.log(key + ': ' + value);
-                }
-                
-                // Validate required fields
-                const requiredFields = ['patient_id', 'care_plan_id', 'title', 'description', 'activity_date', 'activity_time', 'duration', 'activity_type', 'location'];
-                const missingFields = [];
-                
-                requiredFields.forEach(field => {
-                    if (!formData.get(field)) {
-                        missingFields.push(field);
-                    }
-                });
-                
-                if (missingFields.length > 0) {
-                    throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-                }
-                
-                // For PUT requests, convert to JSON
-                let requestBody;
-                let headers = {};
-                
-                if (method === 'PUT') {
-                    const data = Object.fromEntries(formData.entries());
-                    data.scheduled_date = `${data.activity_date}T${data.activity_time}`;
-                    delete data.activity_date;
-                    delete data.activity_time;
-                    requestBody = JSON.stringify(data);
-                    headers['Content-Type'] = 'application/json';
-                } else {
-                    requestBody = formData;
-                }
-                
-                console.log('Submitting request:', {
-                    url,
-                    method,
-                    headers,
-                    body: requestBody
-                });
-                
-                const response = await fetch(url, {
-                    method: method,
-                    headers: headers,
-                    body: requestBody
-                });
-                
-                const data = await response.json();
-                console.log('Server response:', data);
-                
-                if (data.success) {
+            fetch('/api/activity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(jsonData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    // Hide modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('scheduleActivityModal'));
                     modal.hide();
                     
+                    // Show success message
                     const alertDiv = document.createElement('div');
                     alertDiv.className = 'alert alert-success alert-dismissible fade show';
                     alertDiv.innerHTML = `
-                        ${data.message}
+                        ${result.message}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     `;
                     document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.calendar-header'));
                     
+                    // Reset form
+                    this.reset();
+                    
+                    // Update calendar
+                    updateCalendar();
+                    
+                    // Reload page after a short delay
                     setTimeout(() => {
                         window.location.reload();
-                    }, 1000);
+                    }, 1500);
                 } else {
-                    throw new Error(data.message);
+                    throw new Error(result.message);
                 }
-            } catch (error) {
+            })
+            .catch(error => {
                 console.error('Error:', error);
-                const alertDiv = document.createElement('div');
-                alertDiv.className = 'alert alert-danger alert-dismissible fade show mt-3';
-                alertDiv.innerHTML = `
-                    ${error.message || 'An error occurred while saving the activity. Please try again.'}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                `;
-                this.insertBefore(alertDiv, this.firstChild);
-            } finally {
-                submitBtn.disabled = false;
+                alert('Failed to save activity: ' + error.message);
+            })
+            .finally(() => {
+                // Reset button state
                 spinner.classList.add('d-none');
-                btnText.textContent = this.getAttribute('data-mode') === 'edit' ? 'Save Changes' : 'Schedule Activity';
-            }
+                btnText.textContent = 'Schedule Activity';
+            });
         });
 
         // Clear validation states when modal is hidden
@@ -826,7 +921,7 @@
 
         // Calendar functionality
         let currentDate = new Date('{{ current_month.strftime("%Y-%m-%d") }}');
-        const activitiesByDate = /* {{ activities_by_date | tojson | safe }} */ {};
+        const activitiesByDate = {{ activities_by_date | tojson | safe }};
         
         function updateCalendarTitle() {
             document.querySelector('.calendar-header h5').textContent = 
@@ -914,6 +1009,81 @@ Location: ${activity.location || 'Not specified'}`;
             generateCalendar();
         });
 
+        // Update calendar after adding/editing activity
+        function updateCalendar() {
+            // Fetch updated activities
+            fetch('/api/activities')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update activitiesByDate
+                        const newActivitiesByDate = {};
+                        data.activities.forEach(activity => {
+                            const date = new Date(activity.scheduled_date);
+                            const dateKey = date.toISOString().split('T')[0];
+                            if (!newActivitiesByDate[dateKey]) {
+                                newActivitiesByDate[dateKey] = [];
+                            }
+                            newActivitiesByDate[dateKey].push({
+                                id: activity.id,
+                                title: activity.title,
+                                time: activity.time,
+                                type: activity.type,
+                                doctor_name: activity.doctor_name,
+                                location: activity.location
+                            });
+                        });
+                        
+                        // Update the activitiesByDate object
+                        Object.assign(activitiesByDate, newActivitiesByDate);
+                        
+                        // Regenerate calendar
+                        generateCalendar();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error updating calendar:', error);
+                });
+        }
+
+        // Initialize activities data when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            // Fetch initial activities data
+            fetch('/api/activities')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const newActivitiesByDate = {};
+                        data.activities.forEach(activity => {
+                            const date = new Date(activity.scheduled_date);
+                            const dateKey = date.toISOString().split('T')[0];
+                            if (!newActivitiesByDate[dateKey]) {
+                                newActivitiesByDate[dateKey] = [];
+                            }
+                            newActivitiesByDate[dateKey].push({
+                                id: activity.id,
+                                title: activity.title,
+                                time: activity.time,
+                                type: activity.type,
+                                doctor_name: activity.doctor_name,
+                                location: activity.location
+                            });
+                        });
+                        
+                        // Update the activitiesByDate object
+                        Object.assign(activitiesByDate, newActivitiesByDate);
+                        
+                        // Initialize calendar
+                        generateCalendar();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading activities:', error);
+                });
+            
+            filterActivities('all');
+        });
+
         // Add activity functions
         function saveAppointment() {
             const form = document.getElementById('appointmentForm');
@@ -979,49 +1149,16 @@ Location: ${activity.location || 'Not specified'}`;
                 });
         }
 
-        async function populateEditActivityDropdowns(activity) {
-            // 1. Populate patients
-            const patientSelect = document.getElementById('patient_id');
-            const carePlanSelect = document.getElementById('care_plan_id');
-            const goalSelect = document.getElementById('goal_id');
-            // Fetch patients
-            const patients = await fetch('/api/patients').then(r => r.json());
-            patientSelect.innerHTML = '<option value="">Select patient</option>';
-            patients.forEach(p => {
-                patientSelect.innerHTML += `<option value="${p.id}" ${activity.patient_id == p.id ? 'selected' : ''}>${p.first_name} ${p.last_name}</option>`;
-            });
-            // Fetch care plans for selected patient
-            carePlanSelect.innerHTML = '<option value="">Select care plan</option>';
-            if (activity.patient_id) {
-                const carePlans = await fetch(`/api/patient/${activity.patient_id}/care-plans`).then(r => r.json());
-                carePlans.forEach(cp => {
-                    carePlanSelect.innerHTML += `<option value="${cp.id}" ${activity.care_plan_id == cp.id ? 'selected' : ''}>${cp.title}</option>`;
-                });
-            }
-            // Fetch goals for selected care plan
-            goalSelect.innerHTML = '<option value="">Select goal</option>';
-            if (activity.care_plan_id) {
-                const goals = await fetch(`/api/care-plan/${activity.care_plan_id}/goals`).then(r => r.json());
-                goals.forEach(g => {
-                    goalSelect.innerHTML += `<option value="${g.id}" ${activity.goal_id == g.id ? 'selected' : ''}>${g.title}</option>`;
-                });
-            }
-        }
-
         async function editAppointment(id) {
             try {
                 // Show loading state
-                const modal = new bootstrap.Modal(document.getElementById('scheduleActivityModal'));
+                const modal = new bootstrap.Modal(document.getElementById('editActivityModal'));
                 modal.show();
                 
                 // Set form mode to edit
-                const form = document.getElementById('scheduleActivityForm');
+                const form = document.getElementById('editActivityForm');
                 form.setAttribute('data-mode', 'edit');
                 form.setAttribute('data-activity-id', id);
-                
-                // Update modal title and button text
-                document.getElementById('scheduleActivityModalLabel').textContent = 'Edit Activity';
-                document.getElementById('submitActivityBtn').querySelector('.btn-text').textContent = 'Save Changes';
                 
                 // Fetch activity details
                 const response = await fetch(`/api/activity/${id}`);
@@ -1034,29 +1171,16 @@ Location: ${activity.location || 'Not specified'}`;
                 const activity = data.activity;
                 console.log('Activity data:', activity); // Debug log
                 
-                // First, load all patients
-                const patientsResponse = await fetch('/api/patients');
-                const patients = await patientsResponse.json();
-                
-                // Populate patient dropdown
-                const patientSelect = document.getElementById('patient_id');
-                patientSelect.innerHTML = '<option value="">Select patient</option>';
-                patients.forEach(patient => {
-                    const option = document.createElement('option');
-                    option.value = patient.id;
-                    option.textContent = `${patient.first_name} ${patient.last_name}`;
-                    if (patient.id === activity.patient_id) {
-                        option.selected = true;
-                    }
-                    patientSelect.appendChild(option);
-                });
+                // Populate form fields
+                document.getElementById('editActivityId').value = activity.id;
+                document.getElementById('editPatient').value = activity.patient_id;
                 
                 // Load care plans for the selected patient
                 if (activity.patient_id) {
                     const carePlansResponse = await fetch(`/api/patient/${activity.patient_id}/care-plans`);
                     const carePlans = await carePlansResponse.json();
                     
-                    const carePlanSelect = document.getElementById('care_plan_id');
+                    const carePlanSelect = document.getElementById('editCarePlan');
                     carePlanSelect.innerHTML = '<option value="">Select care plan</option>';
                     carePlans.forEach(plan => {
                         const option = document.createElement('option');
@@ -1073,7 +1197,7 @@ Location: ${activity.location || 'Not specified'}`;
                         const goalsResponse = await fetch(`/api/care-plan/${activity.care_plan_id}/goals`);
                         const goals = await goalsResponse.json();
                         
-                        const goalSelect = document.getElementById('goal_id');
+                        const goalSelect = document.getElementById('editGoal');
                         goalSelect.innerHTML = '<option value="">Select goal</option>';
                         goals.forEach(goal => {
                             const option = document.createElement('option');
@@ -1087,70 +1211,55 @@ Location: ${activity.location || 'Not specified'}`;
                     }
                 }
                 
-                // Populate other form fields
-                document.getElementById('title').value = activity.title;
-                document.getElementById('description').value = activity.description;
-                document.getElementById('activity_date').value = activity.scheduled_date.split('T')[0];
-                document.getElementById('activity_time').value = activity.scheduled_date.split('T')[1].slice(0,5);
-                document.getElementById('duration').value = activity.duration;
-                document.getElementById('activity_type').value = activity.activity_type;
-                document.getElementById('location').value = activity.location;
-                document.getElementById('doctor_name').value = activity.doctor_name || '';
-                document.getElementById('status').value = activity.status;
+                document.getElementById('editTitle').value = activity.title;
+                document.getElementById('editDescription').value = activity.description;
+                document.getElementById('editDate').value = activity.scheduled_date.split('T')[0];
+                document.getElementById('editTime').value = activity.scheduled_date.split('T')[1].slice(0,5);
+                document.getElementById('editDuration').value = activity.duration;
+                document.getElementById('editType').value = activity.activity_type;
+                document.getElementById('editLocation').value = activity.location;
+                document.getElementById('editDoctor').value = activity.doctor_name || '';
+                document.getElementById('editStatus').value = activity.status;
+                
+                // Add event listeners for patient and care plan changes
+                document.getElementById('editPatient').addEventListener('change', async function() {
+                    const patientId = this.value;
+                    if (patientId) {
+                        const carePlansResponse = await fetch(`/api/patient/${patientId}/care-plans`);
+                        const carePlans = await carePlansResponse.json();
+                        
+                        const carePlanSelect = document.getElementById('editCarePlan');
+                        carePlanSelect.innerHTML = '<option value="">Select care plan</option>';
+                        carePlans.forEach(plan => {
+                            const option = document.createElement('option');
+                            option.value = plan.id;
+                            option.textContent = plan.title;
+                            carePlanSelect.appendChild(option);
+                        });
+                    }
+                });
+                
+                document.getElementById('editCarePlan').addEventListener('change', async function() {
+                    const carePlanId = this.value;
+                    if (carePlanId) {
+                        const goalsResponse = await fetch(`/api/care-plan/${carePlanId}/goals`);
+                        const goals = await goalsResponse.json();
+                        
+                        const goalSelect = document.getElementById('editGoal');
+                        goalSelect.innerHTML = '<option value="">Select goal</option>';
+                        goals.forEach(goal => {
+                            const option = document.createElement('option');
+                            option.value = goal.id;
+                            option.textContent = goal.title;
+                            goalSelect.appendChild(option);
+                        });
+                    }
+                });
                 
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to load activity details: ' + error.message);
             }
-        }
-
-        function updateActivity() {
-            const form = document.getElementById('editActivityForm');
-            const formData = new FormData(form);
-            const id = formData.get('id');
-            const activityDate = formData.get('activity_date');
-            const activityTime = formData.get('activity_time');
-            const scheduledDate = new Date(`${activityDate}T${activityTime}`);
-            const data = {
-                title: formData.get('title'),
-                description: formData.get('description'),
-                scheduled_date: scheduledDate.toISOString(),
-                duration: parseInt(formData.get('duration')),
-                activity_type: formData.get('activity_type'),
-                doctor_name: formData.get('doctor_name'),
-                location: formData.get('location'),
-                status: formData.get('status')
-            };
-            fetch(`/api/activity/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('editActivityModal'));
-                    modal.hide();
-                    const alertDiv = document.createElement('div');
-                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
-                    alertDiv.innerHTML = `
-                        ${result.message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    `;
-                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.calendar-header'));
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1500);
-                } else {
-                    throw new Error(result.message);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to update activity: ' + error.message);
-            });
         }
 
         function deleteAppointment(id) {
@@ -1396,74 +1505,62 @@ Location: ${activity.location || 'Not specified'}`;
         });
 
         // Export to PDF
-        document.getElementById('exportPDF').addEventListener('click', function() {
-            const activities = document.querySelectorAll('.activity-card');
-            const doc = new jsPDF();
-            
-            // Add title
-            doc.setFontSize(16);
-            doc.text('Activities Report', 14, 15);
-            
-            // Add date
-            doc.setFontSize(10);
-            doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
-            
-            // Add table headers
-            const headers = ['Title', 'Doctor', 'Date', 'Time', 'Location', 'Status'];
-            let y = 35;
-            
-            doc.setFontSize(10);
-            headers.forEach((header, i) => {
-                doc.text(header, 14 + (i * 27), y);
-            });
-            
-            y += 10;
-            
-            // Add activity data
-            activities.forEach(activity => {
-                try {
-                    if (y > 280) {
-                        doc.addPage();
-                        y = 20;
-                    }
-                    
-                    // Get data with fallbacks using safer selector pattern
-                    const titleElement = activity?.querySelector('h6');
-                    const title = titleElement ? titleElement.textContent.trim() : 'N/A';
-                    
-                    const doctorElement = activity?.querySelector('.text-muted.small');
-                    const doctor = doctorElement ? doctorElement.textContent.trim() : 'N/A';
-                    
-                    // Get date and time from the text-end div
-                    const dateTimeElements = activity?.querySelectorAll('.text-end .small');
-                    const dateElement = dateTimeElements?.[0];
-                    const timeElement = dateTimeElements?.[1];
-                    
-                    const date = dateElement ? dateElement.textContent.trim() : 'N/A';
-                    const time = timeElement ? timeElement.textContent.trim() : 'N/A';
-                    
-                    const locationElement = activity?.querySelector('.d-flex.align-items-center.gap-3 .small:last-child');
-                    const location = locationElement ? locationElement.textContent.trim() : 'N/A';
-                    
-                    const statusElement = activity?.querySelector('.status-badge');
-                    const status = statusElement ? statusElement.textContent.trim() : 'N/A';
-                    
-                    // Add data to PDF
-                    doc.text(title, 14, y);
-                    doc.text(doctor, 41, y);
-                    doc.text(date, 68, y);
-                    doc.text(time, 95, y);
-                    doc.text(location, 122, y);
-                    doc.text(status, 149, y);
-                    
-                    y += 10;
-                } catch (error) {
-                    console.error('Error processing activity for PDF:', error);
+        document.getElementById('exportPDF').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/activities/export');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to export activities');
                 }
-            });
-            
-            // Save the PDF
-            doc.save('activities.pdf');
+
+                if (!data.data || data.data.length === 0) {
+                    throw new Error('No activity data found to export');
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(16);
+                doc.text('Activities Report', 14, 15);
+                
+                // Add date
+                doc.setFontSize(10);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+                
+                // Prepare table data
+                const tableData = data.data.map(activity => [
+                    activity.title,
+                    activity.doctor || 'N/A',
+                    activity.date,
+                    activity.time,
+                    activity.location || 'N/A',
+                    activity.status
+                ]);
+                
+                // Add table
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Title', 'Doctor', 'Date', 'Time', 'Location', 'Status']],
+                    body: tableData,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    headStyles: {
+                        fillColor: [124, 58, 237], // Purple color matching the theme
+                        textColor: 255
+                    }
+                });
+                
+                // Save the PDF
+                doc.save('activities.pdf');
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export activities: ' + error.message);
+            }
         });
     });
     </script>

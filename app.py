@@ -1261,10 +1261,18 @@ def update_activity(activity_id):
                 'message': 'Title and scheduled date are required.'
             }), 400
         
+        # Update all fields
         activity.title = data['title']
         activity.description = data.get('description', '')
         activity.scheduled_date = datetime.fromisoformat(data['scheduled_date'])
+        activity.duration = data.get('duration')
+        activity.activity_type = data.get('activity_type')
+        activity.location = data.get('location')
+        activity.doctor_name = data.get('doctor_name')
         activity.status = data.get('status', activity.status)
+        activity.patient_id = data.get('patient_id')
+        activity.care_plan_id = data.get('care_plan_id')
+        activity.goal_id = data.get('goal_id')
         
         db.session.commit()
         return jsonify({'success': True, 'message': 'Activity updated successfully'})
@@ -1423,6 +1431,138 @@ def export_patients():
                 'medical_history': patient.medical_history,
                 'current_medications': patient.current_medications,
                 'allergies': patient.allergies
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': export_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@app.route('/api/activities')
+def get_all_activities():
+    try:
+        activities = Activity.query.all()
+        activities_list = []
+        for activity in activities:
+            activities_list.append({
+                'id': activity.id,
+                'title': activity.title,
+                'description': activity.description,
+                'scheduled_date': activity.scheduled_date.isoformat(),
+                'duration': activity.duration,
+                'activity_type': activity.activity_type,
+                'location': activity.location,
+                'doctor_name': activity.doctor_name,
+                'status': activity.status,
+                'patient_id': activity.patient_id,
+                'care_plan_id': activity.care_plan_id,
+                'goal_id': activity.goal_id,
+                'time': activity.scheduled_date.strftime('%I:%M %p'),
+                'type': activity.activity_type
+            })
+        return jsonify({'success': True, 'activities': activities_list})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+@app.route('/api/care-plans/export')
+@login_required
+def export_care_plans():
+    try:
+        # Get filter parameters
+        search_term = request.args.get('search', '').lower()
+        status_filter = request.args.get('status', 'all')
+        
+        # Base query
+        query = CarePlan.query
+        
+        # Apply search
+        if search_term:
+            query = query.filter(
+                db.or_(
+                    CarePlan.title.ilike(f'%{search_term}%'),
+                    CarePlan.diagnosis.ilike(f'%{search_term}%'),
+                    Patient.first_name.ilike(f'%{search_term}%'),
+                    Patient.last_name.ilike(f'%{search_term}%')
+                )
+            )
+        
+        # Apply status filter
+        if status_filter != 'all':
+            query = query.filter(CarePlan.status == status_filter)
+        
+        # Get care plans
+        care_plans = query.order_by(CarePlan.start_date.desc()).all()
+        
+        # Format data for export
+        export_data = []
+        for care_plan in care_plans:
+            export_data.append({
+                'patient_name': f"{care_plan.patient.first_name} {care_plan.patient.last_name}",
+                'patient_id': care_plan.patient.id,
+                'title': care_plan.title,
+                'diagnosis': care_plan.diagnosis,
+                'start_date': care_plan.start_date.strftime('%Y-%m-%d'),
+                'end_date': care_plan.end_date.strftime('%Y-%m-%d'),
+                'goals': care_plan.goals,
+                'interventions': care_plan.interventions,
+                'notes': care_plan.notes,
+                'status': care_plan.status
+            })
+        
+        return jsonify({
+            'success': True,
+            'data': export_data
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
+
+@app.route('/api/goals/export')
+@login_required
+def export_goals():
+    try:
+        # Get filter parameters
+        search_term = request.args.get('search', '').lower()
+        status_filter = request.args.get('status', 'all')
+        
+        # Base query
+        query = Goal.query
+        
+        # Apply search
+        if search_term:
+            query = query.filter(
+                db.or_(
+                    Goal.title.ilike(f'%{search_term}%'),
+                    Goal.description.ilike(f'%{search_term}%'),
+                    Patient.first_name.ilike(f'%{search_term}%'),
+                    Patient.last_name.ilike(f'%{search_term}%')
+                )
+            )
+        
+        # Apply status filter
+        if status_filter != 'all':
+            query = query.filter(Goal.status == status_filter)
+        
+        # Get goals
+        goals = query.order_by(Goal.target_date.desc()).all()
+        
+        # Format data for export
+        export_data = []
+        for goal in goals:
+            export_data.append({
+                'title': goal.title,
+                'description': goal.description,
+                'patient_name': f"{goal.patient.first_name} {goal.patient.last_name}",
+                'care_plan_title': goal.care_plan.title,
+                'status': goal.status,
+                'target_date': goal.target_date.strftime('%Y-%m-%d') if goal.target_date else None
             })
         
         return jsonify({

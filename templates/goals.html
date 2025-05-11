@@ -425,6 +425,8 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script>
         let currentGoalId = null;
         let viewModal = null;
@@ -733,6 +735,65 @@
                     feedback.remove();
                 }
             });
+        });
+
+        // Export functionality
+        document.querySelector('.btn-outline-secondary').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/goals/export');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to export goals');
+                }
+
+                if (!data.data || data.data.length === 0) {
+                    throw new Error('No goal data found to export');
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(16);
+                doc.text('Goals Report', 14, 15);
+                
+                // Add date
+                doc.setFontSize(10);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+                
+                // Prepare table data
+                const tableData = data.data.map(goal => [
+                    goal.title,
+                    goal.patient_name,
+                    goal.care_plan_title,
+                    goal.status,
+                    new Date(goal.target_date).toLocaleDateString(),
+                    goal.description
+                ]);
+                
+                // Add table
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Goal Title', 'Patient', 'Care Plan', 'Status', 'Target Date', 'Description']],
+                    body: tableData,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    headStyles: {
+                        fillColor: [124, 58, 237], // Purple color matching the theme
+                        textColor: 255
+                    }
+                });
+                
+                // Save the PDF
+                doc.save('goals.pdf');
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export goals: ' + error.message);
+            }
         });
     </script>
 </body>

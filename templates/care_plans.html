@@ -6,6 +6,8 @@
     <title>CareNest - Care Plans</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             background-color: #f8f9fe;
@@ -145,9 +147,19 @@
                 <h4 class="mb-1">Care Plans</h4>
                 <p class="text-muted mb-0">Manage and monitor patient care plans</p>
             </div>
-            <button class="btn btn-primary" style="background-color: #7c3aed; border: none;" data-bs-toggle="modal" data-bs-target="#addCarePlanModal">
-                <i class="bi bi-plus"></i> New Care Plan
-            </button>
+            <div class="d-flex gap-2">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary" id="exportCSV">
+                        <i class="bi bi-file-earmark-excel"></i> CSV
+                    </button>
+                    <button class="btn btn-outline-primary" id="exportPDF">
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
+                    </button>
+                </div>
+                <button class="btn btn-primary" style="background-color: #7c3aed; border: none;" data-bs-toggle="modal" data-bs-target="#addCarePlanModal">
+                    <i class="bi bi-plus"></i> New Care Plan
+                </button>
+            </div>
         </div>
 
         <div class="content-card shadow-sm mb-4">
@@ -159,14 +171,6 @@
                         </span>
                         <input type="text" class="form-control border-start-0" placeholder="Search care plans...">
                     </div>
-                </div>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary">
-                        <i class="bi bi-funnel"></i> Filter
-                    </button>
-                    <button class="btn btn-outline-secondary">
-                        <i class="bi bi-download"></i> Export
-                    </button>
                 </div>
             </div>
 
@@ -673,6 +677,123 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Failed to update care plan');
+            }
+        });
+
+        // Export to CSV
+        document.getElementById('exportCSV').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/care-plans/export');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to export care plans');
+                }
+
+                if (!data.data || data.data.length === 0) {
+                    throw new Error('No care plan data found to export');
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,";
+                
+                // Add headers
+                csvContent += "Patient Name,Patient ID,Care Plan Title,Diagnosis,Start Date,End Date,Goals,Interventions,Notes,Status\n";
+                
+                data.data.forEach(carePlan => {
+                    // Safely escape values
+                    const safePatientName = carePlan.patient_name.replace(/"/g, '""');
+                    const safeTitle = carePlan.title.replace(/"/g, '""');
+                    const safeDiagnosis = carePlan.diagnosis.replace(/"/g, '""');
+                    const safeGoals = carePlan.goals.replace(/"/g, '""');
+                    const safeInterventions = carePlan.interventions.replace(/"/g, '""');
+                    const safeNotes = (carePlan.notes || '').replace(/"/g, '""');
+                    
+                    // Create row with safe values
+                    const row = [
+                        `"${safePatientName}"`,
+                        `"${carePlan.patient_id}"`,
+                        `"${safeTitle}"`,
+                        `"${safeDiagnosis}"`,
+                        `"${carePlan.start_date}"`,
+                        `"${carePlan.end_date}"`,
+                        `"${safeGoals}"`,
+                        `"${safeInterventions}"`,
+                        `"${safeNotes}"`,
+                        `"${carePlan.status}"`
+                    ].join(',');
+                    
+                    csvContent += row + "\n";
+                });
+                
+                // Create download link
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "care_plans.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export care plans: ' + error.message);
+            }
+        });
+
+        // Export to PDF
+        document.getElementById('exportPDF').addEventListener('click', async function() {
+            try {
+                const response = await fetch('/api/care-plans/export');
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.message || 'Failed to export care plans');
+                }
+
+                if (!data.data || data.data.length === 0) {
+                    throw new Error('No care plan data found to export');
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Add title
+                doc.setFontSize(16);
+                doc.text('Care Plans Report', 14, 15);
+                
+                // Add date
+                doc.setFontSize(10);
+                doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 25);
+                
+                // Prepare table data
+                const tableData = data.data.map(carePlan => [
+                    carePlan.patient_name,
+                    carePlan.title,
+                    carePlan.start_date,
+                    carePlan.end_date,
+                    carePlan.status
+                ]);
+                
+                // Add table
+                doc.autoTable({
+                    startY: 35,
+                    head: [['Patient Name', 'Care Plan', 'Start Date', 'End Date', 'Status']],
+                    body: tableData,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 8,
+                        cellPadding: 2
+                    },
+                    headStyles: {
+                        fillColor: [124, 58, 237], // Purple color matching the theme
+                        textColor: 255
+                    }
+                });
+                
+                // Save the PDF
+                doc.save('care_plans.pdf');
+            } catch (error) {
+                console.error('Export error:', error);
+                alert('Failed to export care plans: ' + error.message);
             }
         });
     </script>
