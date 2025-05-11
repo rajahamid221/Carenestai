@@ -40,7 +40,11 @@ jobs:
         run: |
           export FLASK_APP=app.py
           export FLASK_ENV=production
-          flask db init || true  # Ignore error if migrations already exist
+          # Remove existing migrations if they exist
+          rm -rf migrations
+          # Initialize fresh migrations
+          flask db init
+          # Create and apply migrations
           flask db migrate -m "Initial migration"
           flask db upgrade
         
