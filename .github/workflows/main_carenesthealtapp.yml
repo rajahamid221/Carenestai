@@ -34,10 +34,13 @@ jobs:
         
       # Initialize database
       - name: Initialize database
+        env:
+          FLASK_APP: app.py
+          FLASK_ENV: production
         run: |
           export FLASK_APP=app.py
-          flask db upgrade
-          flask db init
+          export FLASK_ENV=production
+          flask db init || true  # Ignore error if migrations already exist
           flask db migrate -m "Initial migration"
           flask db upgrade
         
@@ -73,7 +76,6 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
