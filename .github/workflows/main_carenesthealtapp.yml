@@ -93,4 +93,9 @@ jobs:
         with:
           app-name: 'Carenesthealtapp'
           slot-name: 'Production'
+          startup-command: |
+            export FLASK_APP=app.py
+            export FLASK_ENV=production
+            flask db upgrade
+            gunicorn --bind=0.0.0.0 --timeout 600 app:app
           
