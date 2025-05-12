@@ -96,5 +96,9 @@ jobs:
           startup-command: |
             export FLASK_APP=app.py
             export FLASK_ENV=production
+            export PYTHONPATH=/home/site/wwwroot
+            cd /home/site/wwwroot
+            flask db init || true
+            flask db migrate -m "Initial migration" || true
             flask db upgrade
             gunicorn --bind=0.0.0.0 --timeout 600 app:app
