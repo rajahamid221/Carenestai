@@ -36,6 +36,20 @@ login_manager.login_view = 'login'
 # Initialize OAuth2 client
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
+# Initialize database tables
+with app.app_context():
+    db.create_all()
+    # Create a test user if none exists
+    if not User.query.first():
+        test_user = User(
+            email='test@example.com',
+            name='Test User',
+            role='doctor'
+        )
+        test_user.set_password('password')
+        db.session.add(test_user)
+        db.session.commit()
+
 # User model
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -1576,32 +1590,4 @@ def export_goals():
         }), 500
 
 if __name__ == '__main__':
-    with app.app_context():
-        # Create all database tables
-        db.create_all()
-        
-        # Create a test user if none exists
-        if not User.query.first():
-            test_user = User(
-                email='test@example.com',
-                name='Test User',
-                role='doctor'
-            )
-            test_user.set_password('password')
-            db.session.add(test_user)
-        
-        # Create a test patient if none exists
-        if not Patient.query.first():
-            test_patient = Patient(
-                first_name='John',
-                last_name='Doe',
-                date_of_birth=datetime(1990, 1, 1).date(),
-                gender='Male',
-                phone='123-456-7890',
-                email='john.doe@example.com'
-            )
-            db.session.add(test_patient)
-        
-        db.session.commit()
-    
     app.run(debug=True) 
