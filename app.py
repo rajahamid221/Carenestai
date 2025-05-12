@@ -36,20 +36,6 @@ login_manager.login_view = 'login'
 # Initialize OAuth2 client
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
 
-# Initialize database tables
-with app.app_context():
-    db.create_all()
-    # Create a test user if none exists
-    if not User.query.first():
-        test_user = User(
-            email='test@example.com',
-            name='Test User',
-            role='doctor'
-        )
-        test_user.set_password('password')
-        db.session.add(test_user)
-        db.session.commit()
-
 # User model
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -152,6 +138,20 @@ class Activity(db.Model):
     @property
     def formatted_time(self):
         return self.scheduled_date.strftime('%I:%M %p') if self.scheduled_date else 'No time set'
+
+# Initialize database tables
+with app.app_context():
+    db.create_all()
+    # Create a test user if none exists
+    if not User.query.first():
+        test_user = User(
+            email='test@example.com',
+            name='Test User',
+            role='doctor'
+        )
+        test_user.set_password('password')
+        db.session.add(test_user)
+        db.session.commit()
 
 @login_manager.user_loader
 def load_user(user_id):
