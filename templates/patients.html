@@ -101,22 +101,22 @@
                 <i class="bi bi-people"></i> Patients
             </a>
             <a class="nav-link" href="{{ url_for('messages') }}">
-                <i class="bi bi-chat"></i> Messages
+                <i class="bi bi-chat-dots"></i> Messages
             </a>
             <a class="nav-link" href="{{ url_for('care_plans') }}">
-                <i class="bi bi-clipboard2-pulse"></i> Care Plans
+                <i class="bi bi-journal-medical"></i> Care Plans
             </a>
             <a class="nav-link" href="{{ url_for('goals') }}">
-                <i class="bi bi-trophy"></i> Goals
+                <i class="bi bi-trophy-fill"></i> Goals
             </a>
             <a class="nav-link" href="{{ url_for('activities') }}">
-                <i class="bi bi-calendar3"></i> Activities
+                <i class="bi bi-calendar-check"></i> Activities
             </a>
             <a class="nav-link" href="{{ url_for('analytics') }}">
-                <i class="bi bi-graph-up"></i> Analytics
+                <i class="bi bi-graph-up-arrow"></i> Analytics
             </a>
             <a class="nav-link" href="{{ url_for('notifications') }}">
-                <i class="bi bi-bell"></i> Notifications
+                <i class="bi bi-bell-fill"></i> Notifications
             </a>
         </nav>
 
@@ -255,24 +255,55 @@
                 </table>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mt-4">
-                <div class="text-muted small">
-                    Showing 1-2 of 24 patients
-                </div>
-                <nav>
-                    <ul class="pagination mb-0">
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#"><i class="bi bi-chevron-left"></i></a>
-                        </li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
+            {% if pagination and pagination.pages > 1 %}
+            <div class="d-flex justify-content-center mt-4">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination">
+                        {% if pagination.has_prev %}
                         <li class="page-item">
-                            <a class="page-link" href="#"><i class="bi bi-chevron-right"></i></a>
+                            <a class="page-link" href="{{ url_for('patients', page=pagination.prev_num, search=search_term, gender=gender_filter, age=age_filter) }}" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
                         </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&laquo;</span>
+                        </li>
+                        {% endif %}
+
+                        {% for page_num in pagination.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+                            {% if page_num %}
+                                {% if page_num == pagination.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                                {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('patients', page=page_num, search=search_term, gender=gender_filter, age=age_filter) }}">{{ page_num }}</a>
+                                </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if pagination.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('patients', page=pagination.next_num, search=search_term, gender=gender_filter, age=age_filter) }}" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link" aria-hidden="true">&raquo;</span>
+                        </li>
+                        {% endif %}
                     </ul>
                 </nav>
             </div>
+            {% endif %}
         </div>
     </div>
 

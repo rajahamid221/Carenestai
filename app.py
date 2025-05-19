@@ -43,6 +43,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(200))
     name = db.Column(db.String(100))
     role = db.Column(db.String(20))  # 'patient', 'doctor', 'nurse'
+    profile_image = db.Column(db.String(200))  # Store the path to the profile image
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     updated_at = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
@@ -309,6 +310,8 @@ def patients():
         search_term = request.args.get('search', '').lower()
         gender_filter = request.args.get('gender', 'all')
         age_filter = request.args.get('age', 'all')
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Number of patients per page
         
         # Base query
         query = Patient.query
@@ -346,11 +349,13 @@ def patients():
             elif age_filter == '50+':
                 query = query.filter(Patient.date_of_birth < today - timedelta(days=50*365))
         
-        # Get patients
-        patients_list = query.order_by(Patient.first_name).all()
+        # Get paginated patients
+        pagination = query.order_by(Patient.first_name).paginate(page=page, per_page=per_page, error_out=False)
+        patients_list = pagination.items
         
         return render_template('patients.html', 
             patients=patients_list,
+            pagination=pagination,
             search_term=search_term,
             gender_filter=gender_filter,
             age_filter=age_filter,
@@ -360,6 +365,7 @@ def patients():
         print(f"Error in patients route: {str(e)}")
         return render_template('patients.html', 
             patients=[],
+            pagination=None,
             search_term='',
             gender_filter='all',
             age_filter='all',
@@ -458,9 +464,55 @@ def messages():
 @app.route('/care-plans')
 @login_required
 def care_plans():
-    patients = Patient.query.all()
-    care_plans_list = CarePlan.query.all()
-    return render_template('care_plans.html', patients=patients, care_plans=care_plans_list)
+    try:
+        # Get search and filter parameters
+        search_term = request.args.get('search', '').lower()
+        status_filter = request.args.get('status', 'all')
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Number of care plans per page
+        
+        # Base query
+        query = CarePlan.query
+        
+        # Apply search
+        if search_term:
+            query = query.filter(
+                db.or_(
+                    CarePlan.title.ilike(f'%{search_term}%'),
+                    CarePlan.diagnosis.ilike(f'%{search_term}%'),
+                    Patient.first_name.ilike(f'%{search_term}%'),
+                    Patient.last_name.ilike(f'%{search_term}%')
+                )
+            )
+        
+        # Apply status filter
+        if status_filter != 'all':
+            query = query.filter(CarePlan.status == status_filter)
+        
+        # Get paginated care plans
+        pagination = query.order_by(CarePlan.start_date.desc()).paginate(page=page, per_page=per_page, error_out=False)
+        care_plans_list = pagination.items
+        
+        # Get all patients for the add care plan form
+        patients = Patient.query.order_by(Patient.first_name).all()
+        
+        return render_template('care_plans.html', 
+            patients=patients,
+            care_plans=care_plans_list,
+            pagination=pagination,
+            search_term=search_term,
+            status_filter=status_filter
+        )
+    except Exception as e:
+        print(f"Error in care_plans route: {str(e)}")
+        return render_template('care_plans.html', 
+            patients=[],
+            care_plans=[],
+            pagination=None,
+            search_term='',
+            status_filter='all',
+            error="An error occurred while loading care plans."
+        )
 
 @app.route('/add-care-plan', methods=['POST'])
 @login_required
@@ -1588,6 +1640,39 @@ def export_goals():
             'success': False,
             'message': str(e)
         }), 500
+
+@app.route('/upload_profile_image', methods=['POST'])
+@login_required
+def upload_profile_image():
+    if 'profile_image' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+    
+    file = request.files['profile_image']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+    try:
+        # Create uploads directory if it doesn't exist
+        upload_dir = os.path.join(app.static_folder, 'uploads', 'profile_images')
+        os.makedirs(upload_dir, exist_ok=True)
+
+        # Generate unique filename
+        filename = f"profile_{current_user.id}_{int(datetime.utcnow().timestamp())}.jpg"
+        filepath = os.path.join(upload_dir, filename)
+
+        # Save the file
+        file.save(filepath)
+
+        # Update user's profile image path
+        current_user.profile_image = f"/static/uploads/profile_images/{filename}"
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'image_url': current_user.profile_image
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

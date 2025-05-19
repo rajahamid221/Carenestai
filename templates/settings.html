@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNest - Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fe;
+        }
+        .sidebar {
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .nav-link {
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+        }
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+            font-weight: 500;
+        }
+        .profile-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        .content-card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: none;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .settings-header {
+            background-color: #7c3aed;
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+        }
+        .form-switch .form-check-input {
+            width: 3em;
+            height: 1.5em;
+        }
+        .form-switch .form-check-input:checked {
+            background-color: #7c3aed;
+            border-color: #7c3aed;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="py-4 px-4">
+            <h4 class="mb-0" style="color: #7c3aed;">CareNest</h4>
+            <p class="text-muted small">Healthcare Platform<br>Developed by AI</p>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link" href="{{ url_for('patients') }}">
+                <i class="bi bi-people"></i> Patients
+            </a>
+            <a class="nav-link" href="{{ url_for('messages') }}">
+                <i class="bi bi-chat-dots"></i> Messages
+            </a>
+            <a class="nav-link" href="{{ url_for('care_plans') }}">
+                <i class="bi bi-journal-medical"></i> Care Plans
+            </a>
+            <a class="nav-link" href="{{ url_for('goals') }}">
+                <i class="bi bi-trophy-fill"></i> Goals
+            </a>
+            <a class="nav-link" href="{{ url_for('activities') }}">
+                <i class="bi bi-calendar-check"></i> Activities
+            </a>
+            <a class="nav-link" href="{{ url_for('analytics') }}">
+                <i class="bi bi-graph-up-arrow"></i> Analytics
+            </a>
+            <a class="nav-link" href="{{ url_for('notifications') }}">
+                <i class="bi bi-bell-fill"></i> Notifications
+            </a>
+        </nav>
+
+        <div class="profile-section">
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    {{ current_user.name[0].upper() }}
+                </div>
+                <div>
+                    <div class="fw-500">{{ current_user.name }}</div>
+                    <div class="text-muted small">{{ current_user.role.title() }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-link text-muted ms-auto">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+            <div class="border-top pt-3">
+                <a href="{{ url_for('profile') }}" class="nav-link py-2">
+                    <i class="bi bi-person-fill"></i> Profile
+                </a>
+                <a href="{{ url_for('settings') }}" class="nav-link active py-2">
+                    <i class="bi bi-gear-fill"></i> Settings
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="settings-header">
+            <h3 class="mb-1">Settings</h3>
+            <p class="mb-0">Manage your application preferences and notifications</p>
+        </div>
+
+        <div class="row">
+            <!-- Notification Settings -->
+            <div class="col-md-6">
+                <div class="content-card mb-4">
+                    <h5 class="mb-4">Notification Settings</h5>
+                    <div class="mb-4">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="emailNotifications" checked>
+                            <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="appNotifications" checked>
+                            <label class="form-check-label" for="appNotifications">In-App Notifications</label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="smsNotifications">
+                            <label class="form-check-label" for="smsNotifications">SMS Notifications</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <h5 class="mb-4">Display Settings</h5>
+                    <div class="mb-3">
+                        <label class="form-label">Theme</label>
+                        <select class="form-select">
+                            <option>Light</option>
+                            <option>Dark</option>
+                            <option>System</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Language</label>
+                        <select class="form-select">
+                            <option>English</option>
+                            <option>Spanish</option>
+                            <option>French</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy & Security -->
+            <div class="col-md-6">
+                <div class="content-card mb-4">
+                    <h5 class="mb-4">Privacy & Security</h5>
+                    <div class="mb-4">
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="twoFactorAuth">
+                            <label class="form-check-label" for="twoFactorAuth">Two-Factor Authentication</label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="activityLog" checked>
+                            <label class="form-check-label" for="activityLog">Activity Log</label>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="dataSharing">
+                            <label class="form-check-label" for="dataSharing">Data Sharing</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-card">
+                    <h5 class="mb-4">Data Management</h5>
+                    <button class="btn btn-outline-primary w-100 mb-3">
+                        <i class="bi bi-download me-2"></i>Export Data
+                    </button>
+                    <button class="btn btn-outline-danger w-100">
+                        <i class="bi bi-trash me-2"></i>Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Handle settings changes
+        document.querySelectorAll('.form-check-input, .form-select').forEach(element => {
+            element.addEventListener('change', function() {
+                // Add your settings update logic here
+                console.log('Setting changed:', this.id || this.name);
+            });
+        });
+
+        // Handle data export
+        document.querySelector('.btn-outline-primary').addEventListener('click', function() {
+            // Add your data export logic here
+            alert('Data export initiated');
+        });
+
+        // Handle account deletion
+        document.querySelector('.btn-outline-danger').addEventListener('click', function() {
+            if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+                // Add your account deletion logic here
+                alert('Account deletion initiated');
+            }
+        });
+    </script>
+</body>
+</html> 
