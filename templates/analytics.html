@@ -117,9 +117,12 @@
             <p class="text-muted small">Healthcare Platform<br>Developed by AI</p>
         </div>
         
-        <nav class="nav-menu flex-column">
-            <a class="nav-link" href="{{ url_for('dashboard') }}">
+        <nav class="nav flex-column">
+            <a class="nav-link active" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{{ url_for('quick_actions') }}">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
             </a>
             <a class="nav-link" href="{{ url_for('patients') }}">
                 <i class="bi bi-people"></i> Patients
@@ -136,11 +139,17 @@
             <a class="nav-link" href="{{ url_for('activities') }}">
                 <i class="bi bi-calendar-check"></i> Activities
             </a>
-            <a class="nav-link active" href="{{ url_for('analytics') }}">
+            <a class="nav-link" href="{{ url_for('analytics') }}">
                 <i class="bi bi-graph-up-arrow"></i> Analytics
             </a>
             <a class="nav-link" href="{{ url_for('notifications') }}">
                 <i class="bi bi-bell-fill"></i> Notifications
+            </a>
+            <a class="nav-link" href="{{ url_for('profile') }}">
+                <i class="bi bi-person-fill"></i> Profile
+            </a>
+            <a class="nav-link" href="{{ url_for('settings') }}">
+                <i class="bi bi-gear-fill"></i> Settings
             </a>
         </nav>
 
@@ -305,87 +314,289 @@
                 });
             }
 
-            // Function to initialize overview charts
-            function initializeOverviewCharts() {
-                const treatmentCtx = document.getElementById('treatmentOutcomesChart');
-                if (treatmentCtx) {
-                    charts.treatmentOutcomes = new Chart(treatmentCtx, {
-                        type: 'doughnut',
-                        data: {
-                            labels: ['Improved', 'Unchanged', 'Deteriorated'],
-                            datasets: [{
-                                data: [
-                                    {{ treatment_outcomes.improved }},
-                                    {{ treatment_outcomes.unchanged }},
-                                    {{ treatment_outcomes.deteriorated }}
-                                ],
-                                backgroundColor: [
-                                    '#0EA5E9',
-                                    '#22C55E',
-                                    '#F59E0B'
-                                ],
-                                borderWidth: 0
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: {
-                                        padding: 20,
-                                        font: { size: 12 }
+            // Function to fetch and update treatment outcomes chart
+            async function updateTreatmentOutcomesChart() {
+                try {
+                    const response = await fetch('/api/analytics/treatment-outcomes');
+                    const data = await response.json();
+                    
+                    const ctx = document.getElementById('treatmentOutcomesChart');
+                    if (ctx) {
+                        if (charts.treatmentOutcomes) {
+                            charts.treatmentOutcomes.destroy();
+                        }
+                        
+                        charts.treatmentOutcomes = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: ['Improved', 'Unchanged', 'Deteriorated'],
+                                datasets: [{
+                                    data: [
+                                        data.improved,
+                                        data.unchanged,
+                                        data.deteriorated
+                                    ],
+                                    backgroundColor: [
+                                        '#0EA5E9',
+                                        '#22C55E',
+                                        '#F59E0B'
+                                    ],
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            padding: 20,
+                                            font: { size: 12 }
+                                        }
                                     }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating treatment outcomes chart:', error);
                 }
+            }
 
-                const adherenceCtx = document.getElementById('adherenceChart');
-                if (adherenceCtx) {
-                    charts.adherence = new Chart(adherenceCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: {{ adherence_labels | tojson | safe }},
-                            datasets: [{
-                                label: 'Adherence Rate (%)',
-                                data: {{ adherence_values | tojson | safe }},
-                                backgroundColor: '#8B5CF6',
-                                borderRadius: 4
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: { display: false }
+            // Function to fetch and update adherence chart
+            async function updateAdherenceChart() {
+                try {
+                    const response = await fetch('/api/analytics/adherence');
+                    const data = await response.json();
+                    
+                    const ctx = document.getElementById('adherenceChart');
+                    if (ctx) {
+                        if (charts.adherence) {
+                            charts.adherence.destroy();
+                        }
+                        
+                        charts.adherence = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    label: 'Adherence Rate (%)',
+                                    data: data.values,
+                                    backgroundColor: '#8B5CF6',
+                                    borderRadius: 4
+                                }]
                             },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 100,
-                                    grid: {
-                                        display: true,
-                                        drawBorder: false,
-                                        color: '#E5E7EB'
-                                    },
-                                    ticks: { stepSize: 25 }
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
                                 },
-                                x: {
-                                    grid: { display: false }
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 100,
+                                        grid: {
+                                            display: true,
+                                            drawBorder: false,
+                                            color: '#E5E7EB'
+                                        },
+                                        ticks: { stepSize: 25 }
+                                    },
+                                    x: {
+                                        grid: { display: false }
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating adherence chart:', error);
                 }
+            }
+
+            // Function to fetch and update patient progress chart
+            async function updatePatientProgressChart() {
+                try {
+                    const response = await fetch('/api/analytics/patient-progress');
+                    const data = await response.json();
+                    
+                    const ctx = document.getElementById('patientProgressChart');
+                    if (ctx) {
+                        if (charts.patientProgress) {
+                            charts.patientProgress.destroy();
+                        }
+                        
+                        charts.patientProgress = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    label: 'New Care Plans',
+                                    data: data.values,
+                                    borderColor: '#0EA5E9',
+                                    tension: 0.4,
+                                    fill: false
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            display: true,
+                                            drawBorder: false,
+                                            color: '#E5E7EB'
+                                        }
+                                    },
+                                    x: {
+                                        grid: { display: false }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating patient progress chart:', error);
+                }
+            }
+
+            // Function to fetch and update care plan distribution chart
+            async function updateCarePlanDistributionChart() {
+                try {
+                    const response = await fetch('/api/analytics/care-plan-distribution');
+                    const data = await response.json();
+                    
+                    const ctx = document.getElementById('carePlanDistributionChart');
+                    if (ctx) {
+                        if (charts.carePlanDistribution) {
+                            charts.carePlanDistribution.destroy();
+                        }
+                        
+                        charts.carePlanDistribution = new Chart(ctx, {
+                            type: 'pie',
+                            data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    data: data.values,
+                                    backgroundColor: [
+                                        '#0EA5E9',
+                                        '#22C55E',
+                                        '#F59E0B',
+                                        '#8B5CF6',
+                                        '#EC4899'
+                                    ]
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'right',
+                                        labels: {
+                                            padding: 20,
+                                            font: { size: 12 }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating care plan distribution chart:', error);
+                }
+            }
+
+            // Function to fetch and update health trends chart
+            async function updateHealthTrendsChart() {
+                try {
+                    const response = await fetch('/api/analytics/health-trends');
+                    const data = await response.json();
+                    
+                    const ctx = document.getElementById('healthTrendsChart');
+                    if (ctx) {
+                        if (charts.healthTrends) {
+                            charts.healthTrends.destroy();
+                        }
+                        
+                        const colors = [
+                            '#0EA5E9',
+                            '#22C55E',
+                            '#F59E0B',
+                            '#8B5CF6',
+                            '#EC4899'
+                        ];
+                        
+                        charts.healthTrends = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: data.labels,
+                                datasets: data.datasets.map((dataset, index) => ({
+                                    label: dataset.label,
+                                    data: dataset.data,
+                                    borderColor: colors[index % colors.length],
+                                    tension: 0.4,
+                                    fill: false
+                                }))
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom',
+                                        labels: {
+                                            padding: 20,
+                                            font: { size: 12 }
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        grid: {
+                                            display: true,
+                                            drawBorder: false,
+                                            color: '#E5E7EB'
+                                        }
+                                    },
+                                    x: {
+                                        grid: { display: false }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error updating health trends chart:', error);
+                }
+            }
+
+            // Function to update all charts
+            async function updateAllCharts() {
+                await Promise.all([
+                    updateTreatmentOutcomesChart(),
+                    updateAdherenceChart(),
+                    updatePatientProgressChart(),
+                    updateCarePlanDistributionChart(),
+                    updateHealthTrendsChart()
+                ]);
             }
 
             // Tab switching functionality
             document.addEventListener('DOMContentLoaded', function() {
-                // Initialize overview charts
-                initializeOverviewCharts();
+                // Initialize all charts
+                updateAllCharts();
+
+                // Set up periodic updates (every 30 seconds)
+                setInterval(updateAllCharts, 30000);
 
                 // Add click handlers to tabs
                 const tabs = document.querySelectorAll('#analyticsTabs .nav-link');
@@ -406,20 +617,20 @@
                         const tabId = this.getAttribute('data-tab');
                         document.getElementById(tabId).classList.add('active');
                         
-                        // Initialize charts for the active tab
-                        destroyAllCharts();
+                        // Update charts for the active tab
                         switch(tabId) {
                             case 'overview':
-                                initializeOverviewCharts();
+                                updateTreatmentOutcomesChart();
+                                updateAdherenceChart();
                                 break;
                             case 'patient-outcomes':
-                                // Initialize patient outcomes charts
+                                updatePatientProgressChart();
                                 break;
                             case 'care-plans':
-                                // Initialize care plans charts
+                                updateCarePlanDistributionChart();
                                 break;
                             case 'health-trends':
-                                // Initialize health trends charts
+                                updateHealthTrendsChart();
                                 break;
                         }
                     });

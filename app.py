@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from oauthlib.oauth2 import WebApplicationClient
@@ -10,6 +10,10 @@ import json
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from sqlalchemy import func
+import tempfile
+import zipfile
+import shutil
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +31,7 @@ GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configura
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize Login Manager
 login_manager = LoginManager()
@@ -140,6 +145,40 @@ class Activity(db.Model):
     def formatted_time(self):
         return self.scheduled_date.strftime('%I:%M %p') if self.scheduled_date else 'No time set'
 
+# Message model
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    read_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    sender = db.relationship('User', foreign_keys=[sender_id], backref=db.backref('sent_messages', lazy=True))
+    recipient = db.relationship('User', foreign_keys=[recipient_id], backref=db.backref('received_messages', lazy=True))
+
+    def __repr__(self):
+        return f'<Message {self.id} from {self.sender_id} to {self.recipient_id}>'
+
+# UserSettings model
+class UserSettings(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    email_notifications = db.Column(db.Boolean, default=True)
+    app_notifications = db.Column(db.Boolean, default=True)
+    appointment_reminders = db.Column(db.Boolean, default=True)
+    two_factor_auth = db.Column(db.String(20), default='disabled')
+    data_encryption = db.Column(db.Boolean, default=False)
+    theme = db.Column(db.String(20), default='light')
+    font_size = db.Column(db.String(20), default='medium')
+    data_retention = db.Column(db.Integer, default=90)
+    auto_backup = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('settings', uselist=False))
+
 # Initialize database tables
 with app.app_context():
     db.create_all()
@@ -157,6 +196,83 @@ with app.app_context():
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+@socketio.on('connect')
+def handle_connect():
+    if current_user.is_authenticated:
+        join_room(f'user_{current_user.id}')
+        emit('status', {'user_id': current_user.id, 'status': 'online'}, broadcast=True)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    if current_user.is_authenticated:
+        leave_room(f'user_{current_user.id}')
+        emit('status', {'user_id': current_user.id, 'status': 'offline'}, broadcast=True)
+
+@socketio.on('typing')
+def handle_typing(data):
+    recipient_id = data.get('recipient_id')
+    emit('typing', {
+        'user_id': current_user.id,
+        'name': current_user.name
+    }, room=f'user_{recipient_id}')
+
+@socketio.on('message')
+def handle_message(data):
+    recipient_id = data.get('recipient_id')
+    content = data.get('content')
+    
+    if not recipient_id or not content:
+        print('Invalid message data:', data)
+        return {'error': 'Invalid message data'}
+    
+    try:
+        # Check if recipient exists
+        recipient = User.query.get(recipient_id)
+        if not recipient:
+            return {'error': 'Recipient not found'}
+
+        message = Message(
+            sender_id=current_user.id,
+            recipient_id=recipient_id,
+            content=content
+        )
+        db.session.add(message)
+        db.session.commit()
+        
+        message_data = {
+            'id': message.id,
+            'sender_id': message.sender_id,
+            'recipient_id': message.recipient_id,
+            'content': message.content,
+            'created_at': message.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Emit to sender
+        emit('new_message', message_data, room=f'user_{current_user.id}')
+        
+        # Emit to recipient
+        emit('new_message', message_data, room=f'user_{recipient_id}')
+        
+        print(f'Message sent from {current_user.id} to {recipient_id}: {content}')
+        return {'success': True}
+    except Exception as e:
+        print('Error sending message:', str(e))
+        db.session.rollback()
+        return {'error': str(e)}
+
+@socketio.on('message_read')
+def handle_message_read(data):
+    message_id = data.get('message_id')
+    message = Message.query.get(message_id)
+    
+    if message and message.recipient_id == current_user.id:
+        message.read_at = datetime.utcnow()
+        db.session.commit()
+        
+        emit('message_read', {
+            'message_id': message_id
+        }, room=f'user_{message.sender_id}')
 
 # Routes
 @app.route('/')
@@ -300,7 +416,20 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html')
+    # Get total counts from database
+    total_patients = Patient.query.count()
+    total_care_plans = CarePlan.query.count()
+    total_messages = Message.query.filter(
+        (Message.sender_id == current_user.id) | (Message.recipient_id == current_user.id)
+    ).count()
+    total_appointments = Activity.query.filter_by(activity_type='appointment').count()
+    
+    return render_template('dashboard.html',
+        total_patients=total_patients,
+        total_care_plans=total_care_plans,
+        total_messages=total_messages,
+        total_appointments=total_appointments
+    )
 
 @app.route('/patients')
 @login_required
@@ -310,10 +439,28 @@ def patients():
         search_term = request.args.get('search', '').lower()
         gender_filter = request.args.get('gender', 'all')
         age_filter = request.args.get('age', 'all')
+        patient_id = request.args.get('patient_id', type=int)
         page = request.args.get('page', 1, type=int)
         per_page = 10  # Number of patients per page
         
-        # Base query
+        # If patient_id is provided, get that specific patient
+        if patient_id:
+            patient = Patient.query.get_or_404(patient_id)
+            # Get patient's care plans
+            care_plans = CarePlan.query.filter_by(patient_id=patient_id).all()
+            # Get patient's activities
+            activities = Activity.query.filter_by(patient_id=patient_id).order_by(Activity.scheduled_date.desc()).all()
+            # Get patient's goals
+            goals = Goal.query.filter_by(patient_id=patient_id).all()
+            
+            return render_template('patient_details.html',
+                patient=patient,
+                care_plans=care_plans,
+                activities=activities,
+                goals=goals
+            )
+        
+        # Base query for patient list
         query = Patient.query
         
         # Apply search
@@ -459,7 +606,9 @@ def add_patient():
 @app.route('/messages')
 @login_required
 def messages():
-    return render_template('messages.html')
+    # Get all users except current user
+    users = User.query.filter(User.id != current_user.id).all()
+    return render_template('messages.html', users=users)
 
 @app.route('/care-plans')
 @login_required
@@ -942,23 +1091,24 @@ def add_activity():
 @login_required
 def analytics():
     try:
-        # Treatment Outcomes Data
-        treatment_outcomes = {
-            'improved': 82,
-            'unchanged': 12,
-            'deteriorated': 6
-        }
-
-        # Patient Adherence Data
-        adherence_data = {
-            'labels': ['Medication', 'Appointments', 'Exercise', 'Diet'],
-            'values': [85, 78, 62, 70]
-        }
-
-        # Get total counts for metrics
+        # Get real data from database
         total_patients = Patient.query.count()
         total_care_plans = CarePlan.query.count()
         active_care_plans = CarePlan.query.filter_by(status='active').count()
+
+        # Calculate treatment outcomes based on care plan status
+        treatment_outcomes = {
+            'improved': CarePlan.query.filter_by(status='completed').count(),
+            'unchanged': CarePlan.query.filter_by(status='active').count(),
+            'deteriorated': CarePlan.query.filter_by(status='pending').count()
+        }
+
+        # Calculate adherence rates from activities
+        activities = Activity.query.all()
+        adherence_data = {
+            'labels': ['Medication', 'Appointments', 'Exercise', 'Diet'],
+            'values': [0, 0, 0, 0]  # Will be updated by API
+        }
 
         return render_template('analytics.html',
                              treatment_outcomes=treatment_outcomes,
@@ -978,6 +1128,125 @@ def analytics():
                              total_care_plans=0,
                              active_care_plans=0)
 
+@app.route('/api/analytics/treatment-outcomes')
+@login_required
+def get_treatment_outcomes():
+    try:
+        outcomes = {
+            'improved': CarePlan.query.filter_by(status='completed').count(),
+            'unchanged': CarePlan.query.filter_by(status='active').count(),
+            'deteriorated': CarePlan.query.filter_by(status='pending').count()
+        }
+        return jsonify(outcomes)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/adherence')
+@login_required
+def get_adherence_data():
+    try:
+        # Get all activities
+        activities = Activity.query.all()
+        
+        # Initialize counters for each activity type
+        activity_counts = {
+            'Medication': {'total': 0, 'completed': 0},
+            'Appointments': {'total': 0, 'completed': 0},
+            'Exercise': {'total': 0, 'completed': 0},
+            'Diet': {'total': 0, 'completed': 0}
+        }
+        
+        # Count activities by type and status
+        for activity in activities:
+            if activity.activity_type in activity_counts:
+                activity_counts[activity.activity_type]['total'] += 1
+                if activity.status == 'completed':
+                    activity_counts[activity.activity_type]['completed'] += 1
+        
+        # Calculate adherence rates
+        adherence_data = {
+            'labels': list(activity_counts.keys()),
+            'values': [
+                round((counts['completed'] / counts['total'] * 100) if counts['total'] > 0 else 0)
+                for counts in activity_counts.values()
+            ]
+        }
+        
+        return jsonify(adherence_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/patient-progress')
+@login_required
+def get_patient_progress():
+    try:
+        # Get care plans grouped by month
+        care_plans = db.session.query(
+            func.strftime('%Y-%m', CarePlan.created_at).label('month'),
+            func.count(CarePlan.id).label('count')
+        ).group_by('month').order_by('month').all()
+        
+        progress_data = {
+            'labels': [plan.month for plan in care_plans],
+            'values': [plan.count for plan in care_plans]
+        }
+        
+        return jsonify(progress_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/care-plan-distribution')
+@login_required
+def get_care_plan_distribution():
+    try:
+        # Get care plans grouped by diagnosis
+        care_plans = db.session.query(
+            CarePlan.diagnosis,
+            func.count(CarePlan.id).label('count')
+        ).group_by(CarePlan.diagnosis).all()
+        
+        distribution_data = {
+            'labels': [plan.diagnosis for plan in care_plans],
+            'values': [plan.count for plan in care_plans]
+        }
+        
+        return jsonify(distribution_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/health-trends')
+@login_required
+def get_health_trends():
+    try:
+        # Get activities grouped by month and type
+        activities = db.session.query(
+            func.strftime('%Y-%m', Activity.scheduled_date).label('month'),
+            Activity.activity_type,
+            func.count(Activity.id).label('count')
+        ).group_by('month', Activity.activity_type).order_by('month').all()
+        
+        # Organize data by activity type
+        activity_types = set(activity.activity_type for activity in activities)
+        months = sorted(set(activity.month for activity in activities))
+        
+        trends_data = {
+            'labels': months,
+            'datasets': [
+                {
+                    'label': activity_type,
+                    'data': [
+                        next((a.count for a in activities if a.month == month and a.activity_type == activity_type), 0)
+                        for month in months
+                    ]
+                }
+                for activity_type in activity_types
+            ]
+        }
+        
+        return jsonify(trends_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/notifications')
 @login_required
 def notifications():
@@ -991,7 +1260,82 @@ def profile():
 @app.route('/settings')
 @login_required
 def settings():
-    return render_template('settings.html')
+    user_settings = UserSettings.query.filter_by(user_id=current_user.id).first()
+    if not user_settings:
+        user_settings = UserSettings(user_id=current_user.id)
+        db.session.add(user_settings)
+        db.session.commit()
+    return render_template('settings.html', settings=user_settings)
+
+@app.route('/api/settings', methods=['POST'])
+@login_required
+def update_settings():
+    try:
+        data = request.get_json()
+        user_settings = UserSettings.query.filter_by(user_id=current_user.id).first()
+        
+        if not user_settings:
+            user_settings = UserSettings(user_id=current_user.id)
+            db.session.add(user_settings)
+        
+        # Update settings
+        for key, value in data.items():
+            if hasattr(user_settings, key):
+                setattr(user_settings, key, value)
+        
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/settings/export-data')
+@login_required
+def export_data():
+    try:
+        # Create a temporary directory
+        temp_dir = tempfile.mkdtemp()
+        
+        # Export user data
+        user_data = {
+            'profile': {
+                'name': current_user.name,
+                'email': current_user.email,
+                'role': current_user.role
+            },
+            'settings': {
+                'email_notifications': current_user.settings.email_notifications,
+                'app_notifications': current_user.settings.app_notifications,
+                'theme': current_user.settings.theme,
+                'font_size': current_user.settings.font_size
+            }
+        }
+        
+        # Write user data to JSON file
+        with open(os.path.join(temp_dir, 'user_data.json'), 'w') as f:
+            json.dump(user_data, f, indent=2)
+        
+        # Create ZIP file
+        zip_path = os.path.join(temp_dir, 'carenest-data-export.zip')
+        with zipfile.ZipFile(zip_path, 'w') as zipf:
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    if file != 'carenest-data-export.zip':
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, temp_dir)
+                        zipf.write(file_path, arcname)
+        
+        # Send the ZIP file
+        return send_file(
+            zip_path,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name='carenest-data-export.zip'
+        )
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        # Clean up temporary directory
+        shutil.rmtree(temp_dir)
 
 @app.route('/api/patient/<int:patient_id>/care-plans')
 @login_required
@@ -1674,5 +2018,225 @@ def upload_profile_image():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/send_message', methods=['POST'])
+@login_required
+def send_message():
+    data = request.get_json()
+    recipient_id = data.get('recipient_id')
+    content = data.get('content')
+    if not recipient_id or not content:
+        return jsonify({'success': False, 'error': 'Missing recipient or content'}), 400
+
+    # Assuming you have a Message model
+    message = Message(sender_id=current_user.id, recipient_id=recipient_id, content=content)
+    db.session.add(message)
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Message sent!'})
+
+@app.route('/get_messages', methods=['GET'])
+@login_required
+def get_messages():
+    recipient_id = request.args.get('recipient_id')
+    if not recipient_id:
+        return jsonify({'success': False, 'error': 'Missing recipient'}), 400
+
+    messages = Message.query.filter(
+        ((Message.sender_id == current_user.id) & (Message.recipient_id == recipient_id)) |
+        ((Message.sender_id == recipient_id) & (Message.recipient_id == current_user.id))
+    ).order_by(Message.created_at.asc()).all()
+
+    # Get recipient info
+    recipient = User.query.get(recipient_id)
+    if not recipient:
+        return jsonify({'success': False, 'error': 'Recipient not found'}), 404
+
+    messages_data = [
+        {
+            'id': m.id,
+            'sender_id': m.sender_id,
+            'recipient_id': m.recipient_id,
+            'content': m.content,
+            'created_at': m.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        }
+        for m in messages
+    ]
+    return jsonify({
+        'success': True,
+        'messages': messages_data,
+        'recipient_name': recipient.name,
+        'recipient_email': recipient.email
+    })
+
+@app.route('/get_conversations', methods=['GET'])
+@login_required
+def get_conversations():
+    # Get all unique users that the current user has exchanged messages with
+    sent_messages = Message.query.filter_by(sender_id=current_user.id).with_entities(Message.recipient_id).distinct()
+    received_messages = Message.query.filter_by(recipient_id=current_user.id).with_entities(Message.sender_id).distinct()
+    
+    # Combine and get unique user IDs
+    user_ids = set([m.recipient_id for m in sent_messages] + [m.sender_id for m in received_messages])
+    
+    conversations = []
+    for user_id in user_ids:
+        # Get user info
+        user = User.query.get(user_id)
+        if not user:
+            continue
+            
+        # Get last message
+        last_message = Message.query.filter(
+            ((Message.sender_id == current_user.id) & (Message.recipient_id == user_id)) |
+            ((Message.sender_id == user_id) & (Message.recipient_id == current_user.id))
+        ).order_by(Message.created_at.desc()).first()
+        
+        if last_message:
+            # Count unread messages
+            unread_count = Message.query.filter(
+                Message.sender_id == user_id,
+                Message.recipient_id == current_user.id,
+                Message.read_at.is_(None)
+            ).count()
+            
+            conversations.append({
+                'user_id': user.id,
+                'name': user.name,
+                'email': user.email,
+                'last_message': last_message.content,
+                'last_message_time': last_message.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'unread': unread_count > 0
+            })
+    
+    # Sort conversations by last message time
+    conversations.sort(key=lambda x: x['last_message_time'], reverse=True)
+    
+    return jsonify({
+        'success': True,
+        'conversations': conversations
+    })
+
+@app.route('/mark_messages_read', methods=['POST'])
+@login_required
+def mark_messages_read():
+    sender_id = request.json.get('sender_id')
+    if not sender_id:
+        return jsonify({'success': False, 'error': 'Missing sender ID'}), 400
+
+    # Mark all unread messages from this sender as read
+    Message.query.filter_by(
+        sender_id=sender_id,
+        recipient_id=current_user.id,
+        read_at=None
+    ).update({'read_at': datetime.utcnow()})
+    
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/dashboard/counts')
+@login_required
+def get_dashboard_counts():
+    try:
+        # Get total counts from database
+        total_patients = Patient.query.count()
+        total_care_plans = CarePlan.query.count()
+        total_messages = Message.query.filter(
+            (Message.sender_id == current_user.id) | (Message.recipient_id == current_user.id)
+        ).count()
+        total_appointments = Activity.query.filter_by(activity_type='appointment').count()
+        
+        return jsonify({
+            'success': True,
+            'total_patients': total_patients,
+            'total_care_plans': total_care_plans,
+            'total_messages': total_messages,
+            'total_appointments': total_appointments
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/quick_actions')
+@login_required
+def quick_actions():
+    return render_template('quick_actions.html')
+
+@app.route('/api/quick-actions/appointments')
+@login_required
+def get_today_appointments():
+    # Get today's appointments count
+    today = datetime.now().date()
+    appointments = Activity.query.filter(
+        Activity.activity_type == 'appointment',
+        db.func.date(Activity.scheduled_date) == today
+    ).count()
+    return jsonify({'count': appointments})
+
+@app.route('/api/quick-actions/messages')
+@login_required
+def get_unread_messages():
+    # Get unread messages count
+    unread = Message.query.filter(
+        Message.recipient_id == current_user.id,
+        Message.read_at.is_(None)
+    ).count()
+    return jsonify({'count': unread})
+
+@app.route('/api/quick-actions/notifications')
+@login_required
+def get_notifications():
+    try:
+        # Get unread notifications count
+        notifications = Activity.query.filter(
+            Activity.status == 'pending',
+            Activity.scheduled_date >= datetime.now(),
+            Activity.activity_type.in_(['appointment', 'task', 'reminder'])
+        ).count()
+        return jsonify({'count': notifications})
+    except Exception as e:
+        print(f"Error getting notifications count: {str(e)}")
+        return jsonify({'count': 0, 'error': str(e)}), 500
+
+@app.route('/api/quick-actions/tasks')
+@login_required
+def get_pending_tasks():
+    try:
+        # Get pending tasks count
+        tasks = Activity.query.filter(
+            Activity.status == 'pending',
+            Activity.scheduled_date >= datetime.now(),
+            Activity.activity_type == 'task'
+        ).count()
+        return jsonify({'count': tasks})
+    except Exception as e:
+        print(f"Error getting tasks count: {str(e)}")
+        return jsonify({'count': 0, 'error': str(e)}), 500
+
+@app.route('/api/quick-actions/recent-activity')
+@login_required
+def get_recent_activity():
+    try:
+        # Get recent activities (last 10)
+        activities = Activity.query.order_by(
+            Activity.scheduled_date.desc()
+        ).limit(10).all()
+        
+        return jsonify([{
+            'time': activity.scheduled_date.strftime('%H:%M'),
+            'description': activity.title,
+            'user': activity.doctor_name or 'System',
+            'status': activity.status,
+            'status_color': {
+                'completed': 'success',
+                'pending': 'warning',
+                'cancelled': 'danger',
+                'scheduled': 'info'
+            }.get(activity.status, 'secondary')
+        } for activity in activities])
+    except Exception as e:
+        print(f"Error getting recent activities: {str(e)}")
+        return jsonify([]), 500
+
 if __name__ == '__main__':
-    app.run(debug=True) 
+    socketio.run(app, debug=True) 

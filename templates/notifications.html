@@ -117,8 +117,11 @@
         </div>
         
         <nav class="nav flex-column">
-            <a class="nav-link" href="{{ url_for('dashboard') }}">
+            <a class="nav-link active" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{{ url_for('quick_actions') }}">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
             </a>
             <a class="nav-link" href="{{ url_for('patients') }}">
                 <i class="bi bi-people"></i> Patients
@@ -138,11 +141,16 @@
             <a class="nav-link" href="{{ url_for('analytics') }}">
                 <i class="bi bi-graph-up-arrow"></i> Analytics
             </a>
-            <a class="nav-link active" href="{{ url_for('notifications') }}">
+            <a class="nav-link" href="{{ url_for('notifications') }}">
                 <i class="bi bi-bell-fill"></i> Notifications
             </a>
+            <a class="nav-link" href="{{ url_for('profile') }}">
+                <i class="bi bi-person-fill"></i> Profile
+            </a>
+            <a class="nav-link" href="{{ url_for('settings') }}">
+                <i class="bi bi-gear-fill"></i> Settings
+            </a>
         </nav>
-
         <div class="profile-section">
             <div class="d-flex align-items-center gap-3">
                 <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
@@ -170,9 +178,9 @@
                 <button class="btn btn-light" id="markAllRead">
                     <i class="bi bi-check2-all"></i> Mark All as Read
                 </button>
-                <button class="btn btn-light" id="notificationSettings">
+                <a class="btn btn-light" href="{{ url_for('settings') }}">
                     <i class="bi bi-gear"></i> Settings
-                </button>
+                </a>
             </div>
         </div>
 

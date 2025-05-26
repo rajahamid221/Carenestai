@@ -94,10 +94,13 @@
         </div>
         
         <nav class="nav flex-column">
-            <a class="nav-link" href="{{ url_for('dashboard') }}">
+            <a class="nav-link active" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-grid"></i> Dashboard
             </a>
-            <a class="nav-link active" href="{{ url_for('patients') }}">
+            <a class="nav-link active" href="{{ url_for('quick_actions') }}">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
+            </a>
+            <a class="nav-link" href="{{ url_for('patients') }}">
                 <i class="bi bi-people"></i> Patients
             </a>
             <a class="nav-link" href="{{ url_for('messages') }}">
@@ -117,6 +120,12 @@
             </a>
             <a class="nav-link" href="{{ url_for('notifications') }}">
                 <i class="bi bi-bell-fill"></i> Notifications
+            </a>
+            <a class="nav-link" href="{{ url_for('profile') }}">
+                <i class="bi bi-person-fill"></i> Profile
+            </a>
+            <a class="nav-link" href="{{ url_for('settings') }}">
+                <i class="bi bi-gear-fill"></i> Settings
             </a>
         </nav>
 

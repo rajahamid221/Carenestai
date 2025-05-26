@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareNest - Patient Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fe;
+        }
+        .sidebar {
+            background-color: white;
+            border-right: 1px solid #e5e7eb;
+            height: 100vh;
+            position: fixed;
+            width: 250px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 2rem;
+        }
+        .nav-link {
+            color: #374151;
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+        }
+        .nav-link.active {
+            background-color: #f3f4f6;
+            color: #7c3aed;
+            font-weight: 500;
+        }
+        .profile-section {
+            border-top: 1px solid #e5e7eb;
+            padding: 1rem;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .card-title {
+            color: #111827;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+        .info-label {
+            color: #6b7280;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+        .info-value {
+            color: #111827;
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        .badge-primary {
+            background-color: #7c3aed;
+            color: white;
+        }
+        .badge-warning {
+            background-color: #f59e0b;
+            color: white;
+        }
+        .badge-success {
+            background-color: #22c55e;
+            color: white;
+        }
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            border-left: 4px solid #7c3aed;
+            background-color: #f8f9fe;
+            margin-bottom: 1rem;
+            border-radius: 8px;
+        }
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ede9fe;
+            color: #7c3aed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+        }
+        .activity-content {
+            flex: 1;
+        }
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+        .activity-time {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="py-4 px-4">
+            <h4 class="mb-0" style="color: #7c3aed;">CareNest</h4>
+            <p class="text-muted small">Healthcare Platform<br>Developed by AI</p>
+        </div>
+        
+        <nav class="nav flex-column">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{{ url_for('patients') }}">
+                <i class="bi bi-people"></i> Patients
+            </a>
+            <a class="nav-link" href="{{ url_for('messages') }}">
+                <i class="bi bi-chat-dots"></i> Messages
+            </a>
+            <a class="nav-link" href="{{ url_for('care_plans') }}">
+                <i class="bi bi-journal-medical"></i> Care Plans
+            </a>
+            <a class="nav-link" href="{{ url_for('goals') }}">
+                <i class="bi bi-trophy-fill"></i> Goals
+            </a>
+            <a class="nav-link" href="{{ url_for('activities') }}">
+                <i class="bi bi-calendar-check"></i> Activities
+            </a>
+            <a class="nav-link" href="{{ url_for('analytics') }}">
+                <i class="bi bi-graph-up-arrow"></i> Analytics
+            </a>
+            <a class="nav-link" href="{{ url_for('notifications') }}">
+                <i class="bi bi-bell-fill"></i> Notifications
+            </a>
+        </nav>
+
+        <div class="profile-section">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                    {{ current_user.name[0].upper() }}
+                </div>
+                <div>
+                    <div class="fw-500">{{ current_user.name }}</div>
+                    <div class="text-muted small">{{ current_user.role.title() }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn btn-link text-muted ms-auto">
+                    <i class="bi bi-box-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="mb-1">Patient Details</h4>
+                <p class="text-muted mb-0">{{ patient.first_name }} {{ patient.last_name }}</p>
+            </div>
+            <a href="{{ url_for('patients') }}" class="btn btn-light">
+                <i class="bi bi-arrow-left"></i> Back to Patients
+            </a>
+        </div>
+
+        <div class="row">
+            <!-- Patient Information -->
+            <div class="col-md-4">
+                <div class="card">
+                    <h5 class="card-title">Personal Information</h5>
+                    <div class="info-label">Full Name</div>
+                    <div class="info-value">{{ patient.first_name }} {{ patient.last_name }}</div>
+                    
+                    <div class="info-label">Date of Birth</div>
+                    <div class="info-value">{{ patient.date_of_birth.strftime('%B %d, %Y') }}</div>
+                    
+                    <div class="info-label">Gender</div>
+                    <div class="info-value">{{ patient.gender }}</div>
+                    
+                    <div class="info-label">Phone</div>
+                    <div class="info-value">{{ patient.phone }}</div>
+                    
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ patient.email or 'Not provided' }}</div>
+                    
+                    <div class="info-label">Address</div>
+                    <div class="info-value">{{ patient.address or 'Not provided' }}</div>
+                </div>
+
+                <div class="card">
+                    <h5 class="card-title">Emergency Contact</h5>
+                    <div class="info-label">Name</div>
+                    <div class="info-value">{{ patient.emergency_contact or 'Not provided' }}</div>
+                    
+                    <div class="info-label">Phone</div>
+                    <div class="info-value">{{ patient.emergency_phone or 'Not provided' }}</div>
+                </div>
+            </div>
+
+            <!-- Medical Information -->
+            <div class="col-md-8">
+                <div class="card">
+                    <h5 class="card-title">Medical Information</h5>
+                    <div class="info-label">Medical History</div>
+                    <div class="info-value">{{ patient.medical_history or 'No medical history recorded' }}</div>
+                    
+                    <div class="info-label">Current Medications</div>
+                    <div class="info-value">{{ patient.current_medications or 'No current medications' }}</div>
+                    
+                    <div class="info-label">Allergies</div>
+                    <div class="info-value">{{ patient.allergies or 'No known allergies' }}</div>
+                </div>
+
+                <!-- Care Plans -->
+                <div class="card">
+                    <h5 class="card-title">Care Plans</h5>
+                    {% if care_plans %}
+                        {% for plan in care_plans %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="bi bi-journal-medical"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">{{ plan.title }}</div>
+                                    <div class="activity-time">
+                                        {{ plan.diagnosis }} - {{ plan.status.title() }}
+                                    </div>
+                                </div>
+                                <span class="badge {% if plan.status == 'active' %}badge-primary{% elif plan.status == 'completed' %}badge-success{% else %}badge-warning{% endif %}">
+                                    {{ plan.status.title() }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No care plans found</p>
+                    {% endif %}
+                </div>
+
+                <!-- Recent Activities -->
+                <div class="card">
+                    <h5 class="card-title">Recent Activities</h5>
+                    {% if activities %}
+                        {% for activity in activities[:5] %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="bi bi-calendar-check"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">{{ activity.title }}</div>
+                                    <div class="activity-time">
+                                        {{ activity.scheduled_date.strftime('%B %d, %Y at %I:%M %p') }}
+                                    </div>
+                                </div>
+                                <span class="badge {% if activity.status == 'completed' %}badge-success{% elif activity.status == 'scheduled' %}badge-primary{% else %}badge-warning{% endif %}">
+                                    {{ activity.status.title() }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No recent activities</p>
+                    {% endif %}
+                </div>
+
+                <!-- Goals -->
+                <div class="card">
+                    <h5 class="card-title">Treatment Goals</h5>
+                    {% if goals %}
+                        {% for goal in goals %}
+                            <div class="activity-item">
+                                <div class="activity-icon">
+                                    <i class="bi bi-trophy"></i>
+                                </div>
+                                <div class="activity-content">
+                                    <div class="activity-title">{{ goal.title }}</div>
+                                    <div class="activity-time">
+                                        Target Date: {{ goal.target_date.strftime('%B %d, %Y') }}
+                                    </div>
+                                </div>
+                                <span class="badge {% if goal.status == 'completed' %}badge-success{% elif goal.status == 'in_progress' %}badge-primary{% else %}badge-warning{% endif %}">
+                                    {{ goal.status.title() }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">No goals found</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

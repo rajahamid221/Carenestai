@@ -223,8 +223,11 @@
             <p class="text-muted small">Healthcare Platform<br>Developed by AI</p>
         </div>
         <nav class="nav flex-column">
-            <a class="nav-link" href="{{ url_for('dashboard') }}">
+            <a class="nav-link active" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{{ url_for('quick_actions') }}">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
             </a>
             <a class="nav-link" href="{{ url_for('patients') }}">
                 <i class="bi bi-people"></i> Patients
@@ -247,15 +250,21 @@
             <a class="nav-link" href="{{ url_for('notifications') }}">
                 <i class="bi bi-bell-fill"></i> Notifications
             </a>
+            <a class="nav-link" href="{{ url_for('profile') }}">
+                <i class="bi bi-person-fill"></i> Profile
+            </a>
+            <a class="nav-link" href="{{ url_for('settings') }}">
+                <i class="bi bi-gear-fill"></i> Settings
+            </a>
         </nav>
         <div class="profile-settings-group px-4">
             <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
-                <i class="bi bi-person-fill"></i> Profile
-            </a>
+                    <i class="bi bi-person-fill"></i> Profile
+                </a>
             <a href="{{ url_for('settings') }}" class="nav-link {% if request.endpoint == 'settings' %}active{% endif %}">
-                <i class="bi bi-gear-fill"></i> Settings
-            </a>
-        </div>
+                    <i class="bi bi-gear-fill"></i> Settings
+                </a>
+            </div>
         <div class="logout-section">
             <a href="{{ url_for('logout') }}" class="logout-link">
                 <i class="bi bi-box-arrow-right"></i> Logout
@@ -271,7 +280,7 @@
                     {% if current_user.profile_image %}
                         <img src="{{ current_user.profile_image }}" alt="Profile Picture">
                     {% else %}
-                        {{ current_user.name[0].upper() }}
+                    {{ current_user.name[0].upper() }}
                     {% endif %}
                     <div class="overlay">Change Photo</div>
                 </div>

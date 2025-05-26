@@ -175,6 +175,9 @@
             <a class="nav-link active" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-grid"></i> Dashboard
             </a>
+            <a class="nav-link active" href="{{ url_for('quick_actions') }}">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
+            </a>
             <a class="nav-link" href="{{ url_for('patients') }}">
                 <i class="bi bi-people"></i> Patients
             </a>
@@ -251,8 +254,8 @@
             <div class="col-md-3">
                 <div class="stats-card">
                     <div class="stats-title">Total Patients</div>
-                    <div class="stats-value">2</div>
-                    <div class="stats-subtitle">Active patients under your care</div>
+                    <div class="stats-value">{{ total_patients }}</div>
+                    <div class="stats-subtitle">Active patients in the system</div>
                     <a href="{{ url_for('patients') }}" class="stats-link">
                         View all patients <i class="bi bi-arrow-right"></i>
                     </a>
@@ -261,10 +264,9 @@
             <div class="col-md-3">
                 <div class="stats-card">
                     <div class="stats-title">Appointments</div>
-                    <div class="stats-value">4</div>
-                    <div class="stats-subtitle">Today's scheduled visits</div>
-                    <div class="text-muted small mb-3">Next: 10:30 AM - James Wilson</div>
-                    <a href="{{ url_for('schedule') }}" class="stats-link">
+                    <div class="stats-value">{{ total_appointments }}</div>
+                    <div class="stats-subtitle">Scheduled appointments</div>
+                    <a href="{{ url_for('activities') }}" class="stats-link">
                         View schedule <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
@@ -272,22 +274,20 @@
             <div class="col-md-3">
                 <div class="stats-card">
                     <div class="stats-title">Care Plans</div>
-                    <div class="stats-value">3</div>
-                    <div class="stats-subtitle">Active treatment plans</div>
-                    <div class="text-muted small mb-3">2 updates needed</div>
+                    <div class="stats-value">{{ total_care_plans }}</div>
+                    <div class="stats-subtitle">Active care plans</div>
                     <a href="{{ url_for('care_plans') }}" class="stats-link">
-                        Manage plans <i class="bi bi-arrow-right"></i>
+                        View care plans <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
                     <div class="stats-title">Messages</div>
-                    <div class="stats-value">6</div>
-                    <div class="stats-subtitle">Patient communications</div>
-                    <div class="text-muted small mb-3">2 unread messages</div>
+                    <div class="stats-value">{{ total_messages }}</div>
+                    <div class="stats-subtitle">Total messages</div>
                     <a href="{{ url_for('messages') }}" class="stats-link">
-                        View inbox <i class="bi bi-arrow-right"></i>
+                        View messages <i class="bi bi-arrow-right"></i>
                     </a>
                 </div>
             </div>
@@ -297,7 +297,7 @@
         <div class="alert-card">
             <h5 class="mb-4">Patient Alerts</h5>
             
-            <div class="alert-item danger">
+            <div class="alert-item danger" data-patient-id="1">
                 <div class="alert-icon danger">
                     <i class="bi bi-exclamation-circle"></i>
                 </div>
@@ -305,10 +305,10 @@
                     <div class="alert-title">High Blood Pressure Alert</div>
                     <div class="alert-description">James Wilson - 150/95 mmHg (30 minutes ago)</div>
                 </div>
-                <button class="view-patient-btn">View Patient</button>
+                <button class="view-patient-btn" onclick="viewPatient(1)">View Patient</button>
             </div>
 
-            <div class="alert-item warning">
+            <div class="alert-item warning" data-patient-id="2">
                 <div class="alert-icon warning">
                     <i class="bi bi-exclamation-triangle"></i>
                 </div>
@@ -316,12 +316,48 @@
                     <div class="alert-title">Medication Adherence Warning</div>
                     <div class="alert-description">Emily Johnson - Missed 2 doses this week</div>
                 </div>
-                <button class="view-patient-btn">View Patient</button>
+                <button class="view-patient-btn" onclick="viewPatient(2)">View Patient</button>
             </div>
         </div>
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script>
+        function viewPatient(patientId) {
+            // Redirect to the patient details page
+            window.location.href = `/patients?patient_id=${patientId}`;
+        }
+
+        // Add click event listeners to all view patient buttons
+        document.querySelectorAll('.view-patient-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const patientId = this.closest('.alert-item').dataset.patientId;
+                viewPatient(patientId);
+            });
+        });
+
+        // Function to update dashboard counts
+        function updateDashboardCounts() {
+            fetch('/api/dashboard/counts')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update each count in the correct card
+                        const statsCards = document.querySelectorAll('.stats-card');
+                        statsCards[0].querySelector('.stats-value').textContent = data.total_patients;
+                        statsCards[1].querySelector('.stats-value').textContent = data.total_appointments;
+                        statsCards[2].querySelector('.stats-value').textContent = data.total_care_plans;
+                        statsCards[3].querySelector('.stats-value').textContent = data.total_messages;
+                    }
+                })
+                .catch(error => console.error('Error fetching dashboard counts:', error));
+        }
+
+        // Update counts every 5 seconds
+        setInterval(updateDashboardCounts, 5000);
+    </script>
 </body>
 </html> 

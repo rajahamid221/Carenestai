@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+
+{% block title %}Quick Actions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Quick Actions</h2>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" onclick="refreshQuickActions()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Tasks -->
+    <div class="col-md-6 mb-4">
+        <div class="content-card">
+            <h3 class="settings-title">
+                <i class="bi bi-lightning-charge"></i> Quick Tasks
+            </h3>
+            <div class="d-grid gap-2">
+                <button class="btn btn-primary" onclick="location.href='{{ url_for('patients') }}';">
+                    <i class="bi bi-person-plus"></i> Add New Patient
+                </button>
+                <button class="btn btn-success" onclick="location.href='{{ url_for('schedule') }}';">
+                    <i class="bi bi-calendar-plus"></i> Schedule Appointment
+                </button>
+                <button class="btn btn-info text-white" onclick="location.href='{{ url_for('care_plans') }}';">
+                    <i class="bi bi-clipboard2-plus"></i> Create Care Plan
+                </button>
+                <button class="btn btn-warning text-white" onclick="location.href='{{ url_for('messages') }}';">
+                    <i class="bi bi-chat-dots"></i> Send Message
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Overview -->
+    <div class="col-md-6 mb-4">
+        <div class="content-card">
+            <h3 class="settings-title">
+                <i class="bi bi-calendar-check"></i> Today's Overview
+            </h3>
+            <div class="list-group">
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-calendar-event text-primary"></i>
+                        <span class="ms-2">Appointments</span>
+                    </div>
+                    <span class="badge bg-primary rounded-pill" id="appointmentCount">Loading...</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-chat-left-text text-success"></i>
+                        <span class="ms-2">Unread Messages</span>
+                    </div>
+                    <span class="badge bg-success rounded-pill" id="messageCount">Loading...</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-bell text-warning"></i>
+                        <span class="ms-2">Notifications</span>
+                    </div>
+                    <span class="badge bg-warning rounded-pill" id="notificationCount">Loading...</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-clipboard2-pulse text-danger"></i>
+                        <span class="ms-2">Pending Tasks</span>
+                    </div>
+                    <span class="badge bg-danger rounded-pill" id="taskCount">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-12">
+        <div class="content-card">
+            <h3 class="settings-title">
+                <i class="bi bi-activity"></i> Recent Activity
+            </h3>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Activity</th>
+                            <th>User</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activityList">
+                        <tr>
+                            <td colspan="4" class="text-center">Loading activities...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Function to refresh quick actions data
+    function refreshQuickActions() {
+        console.log('Refreshing quick actions data...');
+        
+        // Add loading state to refresh button
+        const refreshBtn = document.querySelector('.btn-outline-primary');
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refreshing...';
+        
+        // Show loading state in all counters
+        document.getElementById('appointmentCount').textContent = 'Loading...';
+        document.getElementById('messageCount').textContent = 'Loading...';
+        document.getElementById('notificationCount').textContent = 'Loading...';
+        document.getElementById('taskCount').textContent = 'Loading...';
+        document.getElementById('activityList').innerHTML = '<tr><td colspan="4" class="text-center">Loading activities...</td></tr>';
+        
+        // Fetch today's overview data
+        Promise.all([
+            fetch('/api/quick-actions/appointments').then(r => r.json()),
+            fetch('/api/quick-actions/messages').then(r => r.json()),
+            fetch('/api/quick-actions/notifications').then(r => r.json()),
+            fetch('/api/quick-actions/tasks').then(r => r.json()),
+            fetch('/api/quick-actions/recent-activity').then(r => r.json())
+        ])
+        .then(([appointments, messages, notifications, tasks, activities]) => {
+            // Update counts with error handling
+            document.getElementById('appointmentCount').textContent = appointments?.count || 0;
+            document.getElementById('messageCount').textContent = messages?.count || 0;
+            document.getElementById('notificationCount').textContent = notifications?.count || 0;
+            document.getElementById('taskCount').textContent = tasks?.count || 0;
+            
+            // Update activity list with error handling
+            const activityList = document.getElementById('activityList');
+            if (Array.isArray(activities) && activities.length > 0) {
+                activityList.innerHTML = activities.map(activity => `
+                    <tr>
+                        <td>${activity.time || 'N/A'}</td>
+                        <td>${activity.description || 'N/A'}</td>
+                        <td>${activity.user || 'System'}</td>
+                        <td><span class="badge bg-${activity.status_color || 'secondary'}">${activity.status || 'Unknown'}</span></td>
+                    </tr>
+                `).join('');
+            } else {
+                activityList.innerHTML = '<tr><td colspan="4" class="text-center">No recent activities</td></tr>';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching quick actions data:', error);
+            showAlert('Error loading quick actions data. Please try again.', 'danger');
+            
+            // Show error state in all counters
+            document.getElementById('appointmentCount').textContent = 'Error';
+            document.getElementById('messageCount').textContent = 'Error';
+            document.getElementById('notificationCount').textContent = 'Error';
+            document.getElementById('taskCount').textContent = 'Error';
+            document.getElementById('activityList').innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error loading activities</td></tr>';
+        })
+        .finally(() => {
+            // Remove loading state
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh';
+        });
+    }
+
+    // Function to show alerts
+    function showAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        document.querySelector('.content').insertBefore(alertDiv, document.querySelector('.content').firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('Page loaded, initializing quick actions...');
+        refreshQuickActions();
+    });
+
+    // Refresh data every 5 minutes
+    setInterval(refreshQuickActions, 5 * 60 * 1000);
+</script>
+{% endblock %} 

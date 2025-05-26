@@ -112,8 +112,11 @@
         </div>
         
         <nav class="nav flex-column">
-            <a class="nav-link" href="{{ url_for('dashboard') }}">
+            <a class="nav-link active" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{{ url_for('quick_actions') }}">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
             </a>
             <a class="nav-link" href="{{ url_for('patients') }}">
                 <i class="bi bi-people"></i> Patients
@@ -124,7 +127,7 @@
             <a class="nav-link" href="{{ url_for('care_plans') }}">
                 <i class="bi bi-journal-medical"></i> Care Plans
             </a>
-            <a class="nav-link active" href="{{ url_for('goals') }}">
+            <a class="nav-link" href="{{ url_for('goals') }}">
                 <i class="bi bi-trophy-fill"></i> Goals
             </a>
             <a class="nav-link" href="{{ url_for('activities') }}">
@@ -135,6 +138,12 @@
             </a>
             <a class="nav-link" href="{{ url_for('notifications') }}">
                 <i class="bi bi-bell-fill"></i> Notifications
+            </a>
+            <a class="nav-link" href="{{ url_for('profile') }}">
+                <i class="bi bi-person-fill"></i> Profile
+            </a>
+            <a class="nav-link" href="{{ url_for('settings') }}">
+                <i class="bi bi-gear-fill"></i> Settings
             </a>
         </nav>
 
@@ -269,7 +278,7 @@
                                 <i class="bi bi-calendar3 text-muted"></i>
                                 <span class="small text-muted">Target: {{ goal.target_date.strftime('%b %d, %Y') }}</span>
                             </div>
-                            <button class="btn btn-light btn-sm" onclick="viewGoal({{ goal.id }})">View Details</button>
+                            <button class="btn btn-light btn-sm" onclick="viewGoal('{{ goal.id }}')">View Details</button>
                         </div>
                     </div>
                 </div>

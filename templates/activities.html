@@ -225,8 +225,11 @@
         </div>
         
         <nav class="nav flex-column">
-            <a class="nav-link" href="{{ url_for('dashboard') }}">
+            <a class="nav-link active" href="{{ url_for('dashboard') }}">
                 <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a class="nav-link active" href="{{ url_for('quick_actions') }}">
+                <i class="bi bi-lightning-charge"></i> Quick Actions
             </a>
             <a class="nav-link" href="{{ url_for('patients') }}">
                 <i class="bi bi-people"></i> Patients
@@ -240,7 +243,7 @@
             <a class="nav-link" href="{{ url_for('goals') }}">
                 <i class="bi bi-trophy-fill"></i> Goals
             </a>
-            <a class="nav-link active" href="{{ url_for('activities') }}">
+            <a class="nav-link" href="{{ url_for('activities') }}">
                 <i class="bi bi-calendar-check"></i> Activities
             </a>
             <a class="nav-link" href="{{ url_for('analytics') }}">
@@ -248,6 +251,12 @@
             </a>
             <a class="nav-link" href="{{ url_for('notifications') }}">
                 <i class="bi bi-bell-fill"></i> Notifications
+            </a>
+            <a class="nav-link" href="{{ url_for('profile') }}">
+                <i class="bi bi-person-fill"></i> Profile
+            </a>
+            <a class="nav-link" href="{{ url_for('settings') }}">
+                <i class="bi bi-gear-fill"></i> Settings
             </a>
         </nav>
 
@@ -920,12 +929,11 @@
         });
 
         // Calendar functionality
-        let currentDate = new Date('{{ current_month.strftime("%Y-%m-%d") }}');
-        const activitiesByDate = {{ activities_by_date | tojson | safe }};
+        const currentDate = new Date('{{ current_month.strftime("%Y-%m-%d") }}');
+        const activitiesByDate = JSON.parse('{{ activities_by_date | tojson | safe }}');
         
         function updateCalendarTitle() {
-            document.querySelector('.calendar-header h5').textContent = 
-                currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            document.querySelector('.calendar-header h5').textContent = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         }
         
         function generateCalendar() {

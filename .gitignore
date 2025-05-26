@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+env/
 build/
 develop-eggs/
 dist/
@@ -15,7 +16,6 @@ lib64/
 parts/
 sdist/
 var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -23,13 +23,6 @@ wheels/
 # Virtual Environment
 venv/
 ENV/
-env/
-.env
-
-# Flask
-instance/
-.webassets-cache
-*.db
 
 # IDE
 .idea/
@@ -37,32 +30,15 @@ instance/
 *.swp
 *.swo
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Local development settings
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Environment variables
-.env.local
-
-# Environment variables
-.env.local
-
-# Logs
-*.log
-
 # Database
 *.db
 *.sqlite3
+
+# Environment variables
+.env
+
+# Logs
+*.log
 
 # OS generated files
 .DS_Store
