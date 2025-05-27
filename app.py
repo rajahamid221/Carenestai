@@ -179,19 +179,13 @@ class UserSettings(db.Model):
 
     user = db.relationship('User', backref=db.backref('settings', uselist=False))
 
-# Initialize database tables
-with app.app_context():
-    db.create_all()
-    # Create a test user if none exists
-    if not User.query.first():
-        test_user = User(
-            email='test@example.com',
-            name='Test User',
-            role='doctor'
-        )
-        test_user.set_password('password')
-        db.session.add(test_user)
-        db.session.commit()
+def init_db():
+    with app.app_context():
+        db.create_all()
+
+# Only create tables in the main process
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    init_db()
 
 @login_manager.user_loader
 def load_user(user_id):
