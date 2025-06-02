@@ -14,13 +14,24 @@ import tempfile
 import zipfile
 import shutil
 from flask_socketio import SocketIO, emit, join_room, leave_room
+import urllib.parse
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///healthcare_new.db'
+
+# Azure SQL Database configuration
+server = os.getenv('AZURE_SQL_SERVER', 'your-server.database.windows.net')
+database = os.getenv('AZURE_SQL_DATABASE', 'healthcare_db')
+username = os.getenv('AZURE_SQL_USERNAME', 'your-username')
+password = os.getenv('AZURE_SQL_PASSWORD', 'your-password')
+driver = '{ODBC Driver 18 for SQL Server}'
+
+# Create the connection string
+params = urllib.parse.quote_plus(f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
+app.config['SQLALCHEMY_DATABASE_URI'] = f"mssql+pyodbc:///?odbc_connect={params}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Google OAuth2 config
@@ -31,7 +42,13 @@ GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configura
 # Initialize SQLAlchemy
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-socketio = SocketIO(app, cors_allowed_origins="*")
+# Initialize SocketIO with proper configuration
+socketio = SocketIO(app, 
+    cors_allowed_origins="*",
+    async_mode='threading',
+    logger=True,
+    engineio_logger=True
+)
 
 # Initialize Login Manager
 login_manager = LoginManager()
@@ -181,7 +198,21 @@ class UserSettings(db.Model):
 
 def init_db():
     with app.app_context():
-        db.create_all()
+        try:
+            # Check if tables exist before creating them
+            inspector = db.inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+            
+            # Only create tables if they don't exist
+            if not existing_tables:
+                db.create_all()
+                print("Database tables created successfully")
+            else:
+                print("Database tables already exist")
+        except Exception as e:
+            print(f"Error initializing database: {str(e)}")
+            # Don't raise the exception, just log it
+            pass
 
 # Only create tables in the main process
 if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
@@ -2233,4 +2264,4 @@ def get_recent_activity():
         return jsonify([]), 500
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True) 
+    socketio.run(app, host='0.0.0.0', port=8000, use_reloader=False) 

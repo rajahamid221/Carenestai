@@ -1,1 +1,1 @@
-WERKZEUG_RUN_MAIN=true gunicorn --worker-class sync -w 4 --bind 0.0.0.0:8000 --timeout 120 --keep-alive 5 --log-level info --access-logfile - --error-logfile - app:app 
+WERKZEUG_RUN_MAIN=true gunicorn --worker-class sync -w 1 --bind 0.0.0.0:8000 --timeout 120 --keep-alive 5 --log-level info --access-logfile - --error-logfile - app:app 

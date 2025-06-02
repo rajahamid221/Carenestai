@@ -3,100 +3,102 @@
 {% block title %}Quick Actions{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Quick Actions</h2>
-    <div class="d-flex gap-2">
-        <button class="btn btn-outline-primary" onclick="refreshQuickActions()">
-            <i class="bi bi-arrow-clockwise"></i> Refresh
-        </button>
-    </div>
-</div>
-
-<div class="row">
-    <!-- Quick Tasks -->
-    <div class="col-md-6 mb-4">
-        <div class="content-card">
-            <h3 class="settings-title">
-                <i class="bi bi-lightning-charge"></i> Quick Tasks
-            </h3>
-            <div class="d-grid gap-2">
-                <button class="btn btn-primary" onclick="location.href='{{ url_for('patients') }}';">
-                    <i class="bi bi-person-plus"></i> Add New Patient
-                </button>
-                <button class="btn btn-success" onclick="location.href='{{ url_for('schedule') }}';">
-                    <i class="bi bi-calendar-plus"></i> Schedule Appointment
-                </button>
-                <button class="btn btn-info text-white" onclick="location.href='{{ url_for('care_plans') }}';">
-                    <i class="bi bi-clipboard2-plus"></i> Create Care Plan
-                </button>
-                <button class="btn btn-warning text-white" onclick="location.href='{{ url_for('messages') }}';">
-                    <i class="bi bi-chat-dots"></i> Send Message
-                </button>
-            </div>
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Quick Actions</h2>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="refreshQuickActions()">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
         </div>
     </div>
 
-    <!-- Today's Overview -->
-    <div class="col-md-6 mb-4">
-        <div class="content-card">
-            <h3 class="settings-title">
-                <i class="bi bi-calendar-check"></i> Today's Overview
-            </h3>
-            <div class="list-group">
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-calendar-event text-primary"></i>
-                        <span class="ms-2">Appointments</span>
-                    </div>
-                    <span class="badge bg-primary rounded-pill" id="appointmentCount">Loading...</span>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-chat-left-text text-success"></i>
-                        <span class="ms-2">Unread Messages</span>
-                    </div>
-                    <span class="badge bg-success rounded-pill" id="messageCount">Loading...</span>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-bell text-warning"></i>
-                        <span class="ms-2">Notifications</span>
-                    </div>
-                    <span class="badge bg-warning rounded-pill" id="notificationCount">Loading...</span>
-                </div>
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <i class="bi bi-clipboard2-pulse text-danger"></i>
-                        <span class="ms-2">Pending Tasks</span>
-                    </div>
-                    <span class="badge bg-danger rounded-pill" id="taskCount">Loading...</span>
+    <div class="row">
+        <!-- Quick Tasks -->
+        <div class="col-md-6 mb-4">
+            <div class="content-card">
+                <h3 class="settings-title">
+                    <i class="bi bi-lightning-charge"></i> Quick Tasks
+                </h3>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="location.href='{{ url_for('patients') }}';">
+                        <i class="bi bi-person-plus"></i> Add New Patient
+                    </button>
+                    <button class="btn btn-success" onclick="location.href='{{ url_for('schedule') }}';">
+                        <i class="bi bi-calendar-plus"></i> Schedule Appointment
+                    </button>
+                    <button class="btn btn-info text-white" onclick="location.href='{{ url_for('care_plans') }}';">
+                        <i class="bi bi-clipboard2-plus"></i> Create Care Plan
+                    </button>
+                    <button class="btn btn-warning text-white" onclick="location.href='{{ url_for('messages') }}';">
+                        <i class="bi bi-chat-dots"></i> Send Message
+                    </button>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Recent Activity -->
-    <div class="col-12">
-        <div class="content-card">
-            <h3 class="settings-title">
-                <i class="bi bi-activity"></i> Recent Activity
-            </h3>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Activity</th>
-                            <th>User</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="activityList">
-                        <tr>
-                            <td colspan="4" class="text-center">Loading activities...</td>
-                        </tr>
-                    </tbody>
-                </table>
+        <!-- Today's Overview -->
+        <div class="col-md-6 mb-4">
+            <div class="content-card">
+                <h3 class="settings-title">
+                    <i class="bi bi-calendar-check"></i> Today's Overview
+                </h3>
+                <div class="list-group">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-calendar-event text-primary"></i>
+                            <span class="ms-2">Appointments</span>
+                        </div>
+                        <span class="badge bg-primary rounded-pill" id="appointmentCount">Loading...</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-chat-left-text text-success"></i>
+                            <span class="ms-2">Unread Messages</span>
+                        </div>
+                        <span class="badge bg-success rounded-pill" id="messageCount">Loading...</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-bell text-warning"></i>
+                            <span class="ms-2">Notifications</span>
+                        </div>
+                        <span class="badge bg-warning rounded-pill" id="notificationCount">Loading...</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-clipboard2-pulse text-danger"></i>
+                            <span class="ms-2">Pending Tasks</span>
+                        </div>
+                        <span class="badge bg-danger rounded-pill" id="taskCount">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="col-12">
+            <div class="content-card">
+                <h3 class="settings-title">
+                    <i class="bi bi-activity"></i> Recent Activity
+                </h3>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Activity</th>
+                                <th>User</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activityList">
+                            <tr>
+                                <td colspan="4" class="text-center">Loading activities...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
