@@ -14,24 +14,14 @@ import tempfile
 import zipfile
 import shutil
 from flask_socketio import SocketIO, emit, join_room, leave_room
-import urllib.parse
+from ai_care_planner import AICarePlanner
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
-
-# Azure SQL Database configuration
-server = os.getenv('AZURE_SQL_SERVER', 'your-server.database.windows.net')
-database = os.getenv('AZURE_SQL_DATABASE', 'healthcare_db')
-username = os.getenv('AZURE_SQL_USERNAME', 'your-username')
-password = os.getenv('AZURE_SQL_PASSWORD', 'your-password')
-driver = '{ODBC Driver 18 for SQL Server}'
-
-# Create the connection string
-params = urllib.parse.quote_plus(f'DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password}')
-app.config['SQLALCHEMY_DATABASE_URI'] = f"mssql+pyodbc:///?odbc_connect={params}"
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///healthcare_new.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Google OAuth2 config
@@ -57,6 +47,9 @@ login_manager.login_view = 'login'
 
 # Initialize OAuth2 client
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
+
+# Initialize AI Care Planner
+ai_care_planner = AICarePlanner()
 
 # User model
 class User(UserMixin, db.Model):
@@ -2262,6 +2255,127 @@ def get_recent_activity():
     except Exception as e:
         print(f"Error getting recent activities: {str(e)}")
         return jsonify([]), 500
+
+@app.route('/api/generate-care-plan', methods=['POST'])
+@login_required
+def generate_ai_care_plan():
+    """Generate an AI-powered care plan for a patient"""
+    try:
+        data = request.get_json()
+        patient_id = data.get('patient_id')
+        
+        # Get patient data
+        patient = Patient.query.get_or_404(patient_id)
+        
+        # Prepare patient data for AI analysis
+        patient_data = {
+            'age': (datetime.now().date() - patient.date_of_birth).days // 365,
+            'diagnosis': data.get('diagnosis'),
+            'medical_history': patient.medical_history,
+            'current_medications': patient.current_medications,
+            'vital_signs': data.get('vital_signs', {}),
+            'allergies': patient.allergies
+        }
+        
+        # Generate care plan using AI
+        care_plan_data = ai_care_planner.generate_care_plan(patient_data)
+        
+        # Create new care plan in database
+        care_plan = CarePlan(
+            patient_id=patient_id,
+            title=care_plan_data['title'],
+            diagnosis=care_plan_data['diagnosis'],
+            start_date=datetime.strptime(care_plan_data['start_date'], '%Y-%m-%d').date(),
+            end_date=datetime.strptime(care_plan_data['end_date'], '%Y-%m-%d').date(),
+            goals=json.dumps(care_plan_data['goals']),
+            interventions=json.dumps(care_plan_data['interventions']),
+            notes=care_plan_data['notes'],
+            status=care_plan_data['status']
+        )
+        
+        db.session.add(care_plan)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'AI-generated care plan created successfully',
+            'care_plan': {
+                'id': care_plan.id,
+                'title': care_plan.title,
+                'diagnosis': care_plan.diagnosis,
+                'start_date': care_plan.start_date.strftime('%Y-%m-%d'),
+                'end_date': care_plan.end_date.strftime('%Y-%m-%d'),
+                'goals': json.loads(care_plan.goals),
+                'interventions': json.loads(care_plan.interventions),
+                'notes': care_plan.notes,
+                'status': care_plan.status
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error generating care plan: {str(e)}'
+        }), 500
+
+@app.route('/api/update-care-plan/<int:care_plan_id>', methods=['POST'])
+@login_required
+def update_ai_care_plan(care_plan_id):
+    """Update an existing care plan using AI analysis"""
+    try:
+        data = request.get_json()
+        care_plan = CarePlan.query.get_or_404(care_plan_id)
+        patient = Patient.query.get_or_404(care_plan.patient_id)
+        
+        # Prepare updated patient data
+        patient_data = {
+            'age': (datetime.now().date() - patient.date_of_birth).days // 365,
+            'diagnosis': care_plan.diagnosis,
+            'medical_history': patient.medical_history,
+            'current_medications': patient.current_medications,
+            'vital_signs': data.get('vital_signs', {}),
+            'allergies': patient.allergies
+        }
+        
+        # Get existing care plan data
+        existing_care_plan = {
+            'title': care_plan.title,
+            'diagnosis': care_plan.diagnosis,
+            'goals': json.loads(care_plan.goals),
+            'interventions': json.loads(care_plan.interventions),
+            'notes': care_plan.notes,
+            'status': care_plan.status
+        }
+        
+        # Update care plan using AI
+        updated_care_plan = ai_care_planner.update_care_plan(existing_care_plan, patient_data)
+        
+        # Update care plan in database
+        care_plan.goals = json.dumps(updated_care_plan['goals'])
+        care_plan.interventions = json.dumps(updated_care_plan['interventions'])
+        care_plan.notes = updated_care_plan['notes']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Care plan updated successfully',
+            'care_plan': {
+                'id': care_plan.id,
+                'title': care_plan.title,
+                'diagnosis': care_plan.diagnosis,
+                'goals': json.loads(care_plan.goals),
+                'interventions': json.loads(care_plan.interventions),
+                'notes': care_plan.notes,
+                'status': care_plan.status
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Error updating care plan: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8000, use_reloader=False) 

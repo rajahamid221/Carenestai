@@ -1,0 +1,84 @@
+{
+    "diabetes": {
+        "goals": [
+            "Maintain blood glucose levels within target range",
+            "Achieve and maintain healthy body weight",
+            "Regular physical activity",
+            "Prevent complications",
+            "Improve quality of life"
+        ],
+        "interventions": [
+            "Daily blood glucose monitoring",
+            "Regular HbA1c testing",
+            "Nutritional counseling",
+            "Exercise program",
+            "Medication management",
+            "Foot care education",
+            "Regular eye examinations"
+        ]
+    },
+    "hypertension": {
+        "goals": [
+            "Maintain blood pressure within target range",
+            "Reduce cardiovascular risk",
+            "Improve lifestyle habits",
+            "Prevent complications"
+        ],
+        "interventions": [
+            "Regular blood pressure monitoring",
+            "Salt reduction",
+            "Stress management",
+            "Regular exercise",
+            "Medication adherence",
+            "Weight management",
+            "Smoking cessation support"
+        ]
+    },
+    "heart_failure": {
+        "goals": [
+            "Improve heart function",
+            "Reduce symptoms",
+            "Prevent hospitalizations",
+            "Enhance quality of life"
+        ],
+        "interventions": [
+            "Daily weight monitoring",
+            "Fluid restriction",
+            "Medication management",
+            "Exercise program",
+            "Dietary modifications",
+            "Regular follow-up"
+        ]
+    },
+    "copd": {
+        "goals": [
+            "Improve breathing capacity",
+            "Reduce exacerbations",
+            "Enhance exercise tolerance",
+            "Improve quality of life"
+        ],
+        "interventions": [
+            "Pulmonary rehabilitation",
+            "Smoking cessation",
+            "Medication management",
+            "Oxygen therapy if needed",
+            "Exercise program",
+            "Infection prevention"
+        ]
+    },
+    "default": {
+        "goals": [
+            "Improve overall health",
+            "Manage symptoms",
+            "Prevent complications",
+            "Enhance quality of life"
+        ],
+        "interventions": [
+            "Regular monitoring",
+            "Medication management",
+            "Lifestyle modifications",
+            "Regular follow-up",
+            "Patient education"
+        ]
+    }
+} 

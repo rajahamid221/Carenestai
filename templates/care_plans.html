@@ -165,6 +165,9 @@
                         <i class="bi bi-file-earmark-pdf"></i> PDF
                     </button>
                 </div>
+                <button class="btn btn-success" style="background-color: #22c55e; border: none;" data-bs-toggle="modal" data-bs-target="#aiCarePlanModal">
+                    <i class="bi bi-robot"></i> AI Generate Care Plan
+                </button>
                 <button class="btn btn-primary" style="background-color: #7c3aed; border: none;" data-bs-toggle="modal" data-bs-target="#addCarePlanModal">
                     <i class="bi bi-plus"></i> New Care Plan
                 </button>
@@ -474,6 +477,41 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Care Plan Modal -->
+    <div class="modal fade" id="aiCarePlanModal" tabindex="-1" aria-labelledby="aiCarePlanModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="aiCarePlanModalLabel">AI-Powered Care Plan Generator</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="aiCarePlanForm">
+                        <div class="mb-3">
+                            <label for="aiPatientSelect" class="form-label">Select Patient</label>
+                            <select class="form-select" id="aiPatientSelect" name="patient_id" required>
+                                <option value="">Choose...</option>
+                                {% for patient in patients %}
+                                    <option value="{{ patient.id }}">{{ patient.first_name }} {{ patient.last_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="aiDiagnosis" class="form-label">Diagnosis</label>
+                            <input type="text" class="form-control" id="aiDiagnosis" name="diagnosis" placeholder="e.g. Diabetes, Hypertension" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="aiVitalSigns" class="form-label">Vital Signs (JSON)</label>
+                            <textarea class="form-control" id="aiVitalSigns" name="vital_signs" rows="2" placeholder='{"blood_pressure": "120/80", "blood_glucose": 110}'></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success">Generate Care Plan</button>
+                    </form>
+                    <div id="aiCarePlanResult" class="mt-4" style="display:none;"></div>
                 </div>
             </div>
         </div>
@@ -883,6 +921,111 @@
             params.set('status', statusFilter);
             
             window.location.href = `${window.location.pathname}?${params.toString()}`;
+        }
+
+        document.getElementById('aiCarePlanForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const patient_id = document.getElementById('aiPatientSelect').value;
+            const diagnosis = document.getElementById('aiDiagnosis').value;
+            let vital_signs = {};
+            try {
+                vital_signs = JSON.parse(document.getElementById('aiVitalSigns').value || '{}');
+            } catch (err) {
+                alert('Invalid JSON in vital signs!');
+                return;
+            }
+            const resultDiv = document.getElementById('aiCarePlanResult');
+            resultDiv.style.display = 'none';
+            resultDiv.innerHTML = '';
+            resultDiv.className = '';
+            try {
+                const resp = await fetch('/api/generate-care-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ patient_id, diagnosis, vital_signs })
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'alert alert-success';
+                    resultDiv.innerHTML = `
+                        <h6>AI-Generated Care Plan</h6>
+                        <strong>Title:</strong> ${data.care_plan.title}<br>
+                        <strong>Diagnosis:</strong> ${data.care_plan.diagnosis}<br>
+                        <strong>Start Date:</strong> ${data.care_plan.start_date}<br>
+                        <strong>End Date:</strong> ${data.care_plan.end_date}<br>
+                        <strong>Status:</strong> ${data.care_plan.status}<br>
+                        <hr>
+                        <strong>Goals:</strong>
+                        <ul>${data.care_plan.goals.map(g => `<li>${g.title}: ${g.description}</li>`).join('')}</ul>
+                        <strong>Interventions:</strong>
+                        <ul>${data.care_plan.interventions.map(i => `<li>${i.title}: ${i.description}</li>`).join('')}</ul>
+                        <strong>Notes:</strong><br>
+                        <pre>${data.care_plan.notes}</pre>
+                        <div class="mt-3">
+                            <button class="btn btn-primary" onclick="saveAICarePlan(${JSON.stringify(data.care_plan).replace(/"/g, '&quot;')})">
+                                <i class="bi bi-save"></i> Save to System
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.innerText = data.message || 'Failed to generate care plan.';
+                }
+            } catch (err) {
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerText = 'Error: ' + err;
+            }
+        });
+
+        async function saveAICarePlan(carePlan) {
+            try {
+                const formData = new FormData();
+                formData.append('patient_id', document.getElementById('aiPatientSelect').value);
+                formData.append('title', carePlan.title);
+                formData.append('diagnosis', carePlan.diagnosis);
+                formData.append('start_date', carePlan.start_date);
+                formData.append('end_date', carePlan.end_date);
+                formData.append('goals', JSON.stringify(carePlan.goals));
+                formData.append('interventions', JSON.stringify(carePlan.interventions));
+                formData.append('notes', carePlan.notes);
+                formData.append('status', carePlan.status);
+
+                const response = await fetch('/add-care-plan', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Close the AI modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('aiCarePlanModal'));
+                    modal.hide();
+
+                    // Show success message
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                        Care plan saved successfully
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    `;
+                    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
+
+                    // Refresh the page after a short delay
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    throw new Error(data.message || 'Failed to save care plan');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to save care plan: ' + error.message);
+            }
         }
     </script>
 </body>
