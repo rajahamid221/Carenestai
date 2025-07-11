@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#7c3aed">
     
     <!-- Security Headers -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; font-src 'self' cdn.jsdelivr.net; img-src 'self' data:;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.gtranslate.net; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net https://cdn.gtranslate.net; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; font-src 'self' cdn.jsdelivr.net; img-src 'self' data:;">
     <meta http-equiv="X-Content-Type-Options" content="nosniff">
     <meta http-equiv="X-Frame-Options" content="DENY">
     <meta http-equiv="X-XSS-Protection" content="1; mode=block">
@@ -38,6 +38,43 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- GTranslate Widget (Top Right) -->
+    <div id="gtranslate_wrapper" style="position:fixed;top:10px;right:30px;z-index:9999;text-align:right;">
+      <label style="font-weight:600;margin-right:8px;">Select Language:</label>
+      <select id="languageSelect" style="margin-right:8px;">
+        <option value="en">English</option>
+        <option value="ur">Urdu</option>
+        <option value="hi">Hindi</option>
+        <option value="ar">Arabic</option>
+      </select>
+      <div id="gtranslate"></div>
+    </div>
+    <script src="https://cdn.gtranslate.net/widgets/latest/float.js" defer></script>
+    <script>
+      window.addEventListener('DOMContentLoaded', function() {
+        if (window.GTranslate) {
+          new window.GTranslate({
+            selector: "#gtranslate",
+            languages: ["en", "ur", "hi", "ar"],
+            default_language: "en",
+            wrapper_selector: "#gtranslate_wrapper"
+          });
+        }
+        // Language dropdown logic
+        var langSelect = document.getElementById('languageSelect');
+        langSelect.addEventListener('change', function() {
+          var lang = this.value;
+          // GTranslate expects a click on the language link, so simulate it
+          var gLinks = document.querySelectorAll('#gtranslate a');
+          gLinks.forEach(function(link) {
+            if (link.getAttribute('data-lang') === lang) {
+              link.click();
+            }
+          });
+        });
+      });
+    </script>
+    <style>#MicrosoftTranslatorWidget { display: none !important; }</style>
     <div class="wrapper">
         <!-- Sidebar -->
         <div class="sidebar">
@@ -150,5 +187,10 @@
         });
     </script>
     {% block extra_js %}{% endblock %}
+    <style>
+        .main-content {
+            margin-top: 40px;
+        }
+    </style>
 </body>
 </html> 

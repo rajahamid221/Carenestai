@@ -54,7 +54,7 @@ FLASK_APP=app.py
 FLASK_ENV=development
 SECRET_KEY=your-secret-key-here
 GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_CLIENT_SECRET=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
 ```
 
 5. Initialize the database:

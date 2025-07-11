@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_file
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_file # type: ignore # type: ignore
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from oauthlib.oauth2 import WebApplicationClient
@@ -15,24 +15,43 @@ import zipfile
 import shutil
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from ai_care_planner import AICarePlanner
+import logging
+from logging.handlers import RotatingFileHandler
+from sqlalchemy.exc import IntegrityError
 
 # Load environment variables
 load_dotenv()
 
+# Set default environment variables if not present
+os.environ.setdefault('SECRET_KEY', 'dev-secret-key-123')
+os.environ.setdefault('DATABASE_URL', 'sqlite:///carenestai.db')
+os.environ.setdefault('GOOGLE_CLIENT_ID', 'your-google-client-id')
+os.environ.setdefault('GOOGLE_CLIENT_SECRET', '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')
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+handler = RotatingFileHandler('app.log', maxBytes=10000, backupCount=1)
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+# Initialize Flask app
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///healthcare_new.db'
+
+# Add logging handler to app
+app.logger.addHandler(handler)
+
+# Set default configuration
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-123')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///carenestai.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Google OAuth2 config
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
-
-# Initialize SQLAlchemy
+# Initialize extensions
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-# Initialize SocketIO with proper configuration
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 socketio = SocketIO(app, 
     cors_allowed_origins="*",
     async_mode='threading',
@@ -40,10 +59,18 @@ socketio = SocketIO(app,
     engineio_logger=True
 )
 
-# Initialize Login Manager
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
+# Initialize AI Care Planner with error handling
+try:
+    ai_care_planner = AICarePlanner()
+    app.logger.info("AI Care Planner initialized successfully")
+except Exception as e:
+    app.logger.error(f"Failed to initialize AI Care Planner: {str(e)}")
+    ai_care_planner = None
+
+# Google OAuth2 config
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', 'your-google-client-id')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', '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')
+GOOGLE_DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 
 # Initialize OAuth2 client
 client = WebApplicationClient(GOOGLE_CLIENT_ID)
@@ -88,6 +115,9 @@ class Patient(db.Model):
 
 # Care Plan model
 class CarePlan(db.Model):
+    __table_args__ = (
+        db.UniqueConstraint('patient_id', 'title', name='uq_patient_title'),
+    )
     id = db.Column(db.Integer, primary_key=True)
     patient_id = db.Column(db.Integer, db.ForeignKey('patient.id'), nullable=False)
     title = db.Column(db.String(200), nullable=False)
@@ -207,9 +237,8 @@ def init_db():
             # Don't raise the exception, just log it
             pass
 
-# Only create tables in the main process
-if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-    init_db()
+# Initialize the database
+init_db()
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -370,59 +399,45 @@ def google_login():
 
 @app.route('/google-login/callback')
 def google_callback():
-    # Get authorization code Google sent back to you
-    code = request.args.get("code")
-    
-    # Find out what URL to hit to get tokens that allow you to ask for
-    # things on behalf of a user
-    google_provider_cfg = requests.get(GOOGLE_DISCOVERY_URL).json()
-    token_endpoint = google_provider_cfg["token_endpoint"]
-    
-    # Prepare and send request to get tokens
-    token_url, headers, body = client.prepare_token_request(
-        token_endpoint,
-        authorization_response=request.url,
-        redirect_url=request.base_url,
-        code=code
-    )
-    token_response = requests.post(
-        token_url,
-        headers=headers,
-        data=body,
-        auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
-    )
+    try:
+        code = request.args.get("code")
+        if not code:
+            app.logger.error("Missing code parameter")
+            return "Missing code parameter", 400
 
-    # Parse the tokens
-    client.parse_request_body_response(json.dumps(token_response.json()))
-    
-    # Now that we have tokens, let's find and hit URL
-    # from Google that gives you user's profile information
-    userinfo_endpoint = google_provider_cfg["userinfo_endpoint"]
-    uri, headers, body = client.add_token(userinfo_endpoint)
-    userinfo_response = requests.get(uri, headers=headers, data=body)
-    
-    if userinfo_response.json().get("email_verified"):
-        unique_id = userinfo_response.json()["sub"]
-        users_email = userinfo_response.json()["email"]
-        users_name = userinfo_response.json()["given_name"]
-        
-        # Check if user exists, if not create new user
-        user = User.query.filter_by(email=users_email).first()
-        if not user:
-            user = User(
-                id=unique_id,
-                name=users_name,
-                email=users_email,
-                role='patient'  # Default role
-            )
-            db.session.add(user)
-            db.session.commit()
-        
-        # Begin user session
-        login_user(user)
-        return redirect(url_for('dashboard'))
-    else:
-        return "User email not available or not verified by Google.", 400
+        # Exchange code for token
+        token_url, headers, body = client.prepare_token_request(
+            "https://oauth2.googleapis.com/token",
+            authorization_response=request.url,
+            redirect_url=request.base_url,
+            code=code
+        )
+        token_response = requests.post(
+            token_url,
+            headers=headers,
+            data=body,
+            auth=(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET),
+        )
+        app.logger.info(f"Token response: {token_response.text}")
+        client.parse_request_body_response(token_response.text)
+
+        # Get user info
+        userinfo_endpoint = "https://openidconnect.googleapis.com/v1/userinfo"
+        uri, headers, body = client.add_token(userinfo_endpoint)
+        userinfo_response = requests.get(uri, headers=headers, data=body)
+        app.logger.info(f"Userinfo response: {userinfo_response.text}")
+        userinfo = userinfo_response.json()
+
+        if not userinfo.get("email"):
+            app.logger.error("Email not available or not verified by Google.")
+            return "Email not available or not verified by Google.", 400
+
+        # ... rest of your login logic ...
+        return redirect(url_for("dashboard"))
+    except Exception as e:
+        import traceback
+        app.logger.error(f"Google login failed: {e}\n{traceback.format_exc()}")
+        return "Internal Server Error", 500
 
 @app.route('/logout')
 @login_required
@@ -717,6 +732,18 @@ def add_care_plan():
                 'message': 'Invalid date format. Please use YYYY-MM-DD format.'
             })
         
+        # Duplicate check: prevent creating the same care plan title for the same patient (case-insensitive, trimmed)
+        input_title = (request.form.get('title') or '').strip().lower()
+        existing_plan = CarePlan.query.filter(
+            CarePlan.patient_id == request.form.get('patient_id'),
+            db.func.lower(db.func.trim(CarePlan.title)) == input_title
+        ).first()
+        if existing_plan:
+            return jsonify({
+                'success': True,
+                'already_exists': True,
+                'message': 'Care plan already saved successfully.'
+            }), 200
         # Create new care plan
         new_care_plan = CarePlan(
             patient_id=request.form.get('patient_id'),
@@ -730,13 +757,67 @@ def add_care_plan():
             status='active'
         )
         
+        import datetime as dt
+        app.logger.info(f"[ADD_CARE_PLAN] {dt.datetime.now().isoformat()} | User: {getattr(current_user, 'id', None)} | Data: {request.form.to_dict()}")
+        print(f"[ADD_CARE_PLAN] {dt.datetime.now().isoformat()} | User: {getattr(current_user, 'id', None)} | Data: {request.form.to_dict()}")
         print("Created care plan object:", new_care_plan.__dict__)
         
         try:
             db.session.add(new_care_plan)
             db.session.commit()
             print("Successfully added care plan to database")
-            
+
+            # --- AI Goals and Interventions to System Goals and Activities ---
+            import json
+            from datetime import datetime, timedelta
+            # Parse goals and interventions from JSON
+            try:
+                goals_data = json.loads(new_care_plan.goals)
+            except Exception as e:
+                goals_data = []
+            try:
+                interventions_data = json.loads(new_care_plan.interventions)
+            except Exception as e:
+                interventions_data = []
+
+            # Save each goal
+            for goal in goals_data:
+                goal_title = goal.get('title') or ''
+                goal_desc = goal.get('description') or ''
+                target_date = goal.get('target_date') or (datetime.now() + timedelta(days=30)).date()
+                status = goal.get('status') or 'pending'
+                g = Goal(
+                    title=goal_title,
+                    description=goal_desc,
+                    patient_id=new_care_plan.patient_id,
+                    care_plan_id=new_care_plan.id,
+                    target_date=target_date,
+                    status=status
+                )
+                db.session.add(g)
+            db.session.commit()
+
+            # Save each intervention as an Activity
+            for intervention in interventions_data:
+                act_title = intervention.get('title') or ''
+                act_desc = intervention.get('description') or ''
+                scheduled_date = datetime.now() + timedelta(days=1)
+                duration = 30
+                activity_type = intervention.get('frequency') or 'Daily'
+                a = Activity(
+                    title=act_title,
+                    description=act_desc,
+                    patient_id=new_care_plan.patient_id,
+                    care_plan_id=new_care_plan.id,
+                    scheduled_date=scheduled_date,
+                    duration=duration,
+                    activity_type=activity_type,
+                    status='scheduled'
+                )
+                db.session.add(a)
+            db.session.commit()
+            # --- End AI Goals/Interventions mapping ---
+
             # Flash a success message
             flash('Care plan created successfully!', 'success')
             
@@ -764,9 +845,69 @@ def add_care_plan():
 @app.route('/goals')
 @login_required
 def goals():
-    patients = Patient.query.all()
-    goals_list = Goal.query.all()
-    return render_template('goals.html', patients=patients, goals=goals_list)
+    try:
+        # Get search, filter, and pagination parameters
+        search_term = request.args.get('search', '').lower()
+        status_filter = request.args.get('status', 'all')
+        patient_id_filter = request.args.get('patient_id', 'all')
+        page = request.args.get('page', 1, type=int)
+        # Remove per_page from request.args if present to avoid override
+        if 'per_page' in request.args:
+            args = request.args.to_dict()
+            args.pop('per_page')
+            request.args = request.args.__class__(args)
+        per_page = 11  # Number of goals per page
+        
+        # Base query for goals
+        query = Goal.query.join(Patient).join(CarePlan)
+        
+        # Apply search filter
+        if search_term:
+            query = query.filter(
+                db.or_(
+                    Goal.title.ilike(f'%{search_term}%'),
+                    Goal.description.ilike(f'%{search_term}%'),
+                    Patient.first_name.ilike(f'%{search_term}%'),
+                    Patient.last_name.ilike(f'%{search_term}%')
+                )
+            )
+
+        # Apply status filter
+        if status_filter != 'all':
+            query = query.filter(Goal.status == status_filter)
+        
+        # Apply patient filter
+        if patient_id_filter != 'all':
+            query = query.filter(Goal.patient_id == patient_id_filter)
+
+        # Get paginated goals
+        pagination = query.order_by(Goal.target_date.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        goals_list = pagination.items
+        
+        # Get all patients for the filter dropdown
+        patients = Patient.query.order_by(Patient.first_name).all()
+        
+        return render_template(
+            'goals.html', 
+            goals=goals_list,
+            patients=patients,
+            pagination=pagination,
+            search_term=search_term,
+            status_filter=status_filter,
+            patient_id_filter=patient_id_filter
+        )
+    except Exception as e:
+        app.logger.error(f"Error in goals route: {str(e)}")
+        # Provide default values in case of an error
+        return render_template(
+            'goals.html', 
+            goals=[], 
+            patients=[], 
+            pagination=None, 
+            error="An error occurred while loading goals."
+        )
 
 @app.route('/goals/<int:goal_id>')
 @login_required
@@ -1419,6 +1560,7 @@ def update_care_plan(care_plan_id):
         care_plan.goals = request.form.get('goals')
         care_plan.interventions = request.form.get('interventions')
         care_plan.notes = request.form.get('notes')
+        care_plan.status = request.form.get('status') or care_plan.status
         
         db.session.commit()
         
@@ -2279,7 +2421,18 @@ def generate_ai_care_plan():
         
         # Generate care plan using AI
         care_plan_data = ai_care_planner.generate_care_plan(patient_data)
-        
+
+        # Duplicate check: prevent creating the same care plan title for the same patient
+        existing_plan = CarePlan.query.filter_by(
+            patient_id=patient_id,
+            title=care_plan_data['title']
+        ).first()
+        if existing_plan:
+            return jsonify({
+                'success': True,
+                'already_exists': True,
+                'message': 'Care plan already saved successfully.'
+            }), 200
         # Create new care plan in database
         care_plan = CarePlan(
             patient_id=patient_id,
@@ -2292,25 +2445,88 @@ def generate_ai_care_plan():
             notes=care_plan_data['notes'],
             status=care_plan_data['status']
         )
+        import datetime as dt
+        app.logger.info(f"[AI_CARE_PLAN] {dt.datetime.now().isoformat()} | User: {getattr(current_user, 'id', None)} | Data: {data}")
+        print(f"[AI_CARE_PLAN] {dt.datetime.now().isoformat()} | User: {getattr(current_user, 'id', None)} | Data: {data}")
         
-        db.session.add(care_plan)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'AI-generated care plan created successfully',
-            'care_plan': {
-                'id': care_plan.id,
-                'title': care_plan.title,
-                'diagnosis': care_plan.diagnosis,
-                'start_date': care_plan.start_date.strftime('%Y-%m-%d'),
-                'end_date': care_plan.end_date.strftime('%Y-%m-%d'),
-                'goals': json.loads(care_plan.goals),
-                'interventions': json.loads(care_plan.interventions),
-                'notes': care_plan.notes,
-                'status': care_plan.status
-            }
-        })
+        try:
+            db.session.add(care_plan)
+            db.session.commit()
+
+            # --- AI Goals and Interventions to System Goals and Activities ---
+            # Parse goals and interventions from JSON
+            try:
+                goals_data = json.loads(care_plan.goals)
+            except Exception as e:
+                goals_data = []
+            try:
+                interventions_data = json.loads(care_plan.interventions)
+            except Exception as e:
+                interventions_data = []
+
+            # Save each goal
+            for goal in goals_data:
+                goal_title = goal.get('title') or ''
+                goal_desc = goal.get('description') or ''
+                target_date_str = goal.get('target_date')
+                if target_date_str:
+                    target_date = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+                else:
+                    target_date = (datetime.now() + timedelta(days=30)).date()
+                status = goal.get('status') or 'pending'
+                g = Goal(
+                    title=goal_title,
+                    description=goal_desc,
+                    patient_id=care_plan.patient_id,
+                    care_plan_id=care_plan.id,
+                    target_date=target_date,
+                    status=status
+                )
+                db.session.add(g)
+            db.session.commit()
+
+            # Save each intervention as an Activity
+            for intervention in interventions_data:
+                act_title = intervention.get('title') or ''
+                act_desc = intervention.get('description') or ''
+                scheduled_date = datetime.now() + timedelta(days=1)
+                duration = 30
+                activity_type = intervention.get('frequency') or 'Daily'
+                a = Activity(
+                    title=act_title,
+                    description=act_desc,
+                    patient_id=care_plan.patient_id,
+                    care_plan_id=care_plan.id,
+                    scheduled_date=scheduled_date,
+                    duration=duration,
+                    activity_type=activity_type,
+                    status='scheduled'
+                )
+                db.session.add(a)
+            db.session.commit()
+            # --- End AI Goals/Interventions mapping ---
+
+            return jsonify({
+                'success': True,
+                'message': 'AI-generated care plan created successfully',
+                'care_plan': {
+                    'id': care_plan.id,
+                    'title': care_plan.title,
+                    'diagnosis': care_plan.diagnosis,
+                    'start_date': care_plan.start_date.strftime('%Y-%m-%d'),
+                    'end_date': care_plan.end_date.strftime('%Y-%m-%d'),
+                    'goals': json.loads(care_plan.goals),
+                    'interventions': json.loads(care_plan.interventions),
+                    'notes': care_plan.notes,
+                    'status': care_plan.status
+                }
+            })
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({
+                'success': False,
+                'message': f'Error generating care plan: {str(e)}'
+            }), 500
         
     except Exception as e:
         return jsonify({
@@ -2354,6 +2570,7 @@ def update_ai_care_plan(care_plan_id):
         care_plan.goals = json.dumps(updated_care_plan['goals'])
         care_plan.interventions = json.dumps(updated_care_plan['interventions'])
         care_plan.notes = updated_care_plan['notes']
+        care_plan.status = updated_care_plan['status']
         
         db.session.commit()
         
@@ -2376,6 +2593,62 @@ def update_ai_care_plan(care_plan_id):
             'success': False,
             'message': f'Error updating care plan: {str(e)}'
         }), 500
+
+@app.route('/api/goal/<int:goal_id>', methods=['DELETE'])
+@login_required
+def delete_goal(goal_id):
+    goal = Goal.query.get_or_404(goal_id)
+    
+    # Optional: Check for permissions
+    # if current_user.id != goal.patient.user_id:
+    #     return jsonify({"message": "Permission denied"}), 403
+        
+    try:
+        db.session.delete(goal)
+        db.session.commit()
+        return jsonify({"message": "Goal deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error deleting goal: {str(e)}")
+        return jsonify({"message": "Failed to delete goal"}), 500
+
+@app.route('/api/goal/<int:goal_id>', methods=['GET'])
+@login_required
+def get_goal(goal_id):
+    goal = Goal.query.get_or_404(goal_id)
+    try:
+        return jsonify({
+            'id': goal.id,
+            'title': goal.title,
+            'description': goal.description,
+            'patient_name': f"{goal.patient.first_name} {goal.patient.last_name}",
+            'care_plan_title': goal.care_plan.title,
+            'target_date': goal.target_date.isoformat() if goal.target_date else None,
+            'created_at': goal.created_at.isoformat() if goal.created_at else None,
+            'status': goal.status
+        })
+    except Exception as e:
+        app.logger.error(f"Error fetching goal details: {str(e)}")
+        return jsonify({"message": "Failed to fetch goal details"}), 500
+
+# --- Real-Time Patient Alerts ---
+def send_patient_alert(alert):
+    # alert: dict with keys: type, title, description, patient_id, severity
+    socketio.emit('patient_alert', alert)
+
+@app.route('/api/test-patient-alert')
+@login_required
+def test_patient_alert():
+    # Example alert for testing
+    alert = {
+        'type': 'vitals',
+        'title': 'High Blood Pressure Alert',
+        'description': 'James Wilson - 150/95 mmHg (just now)',
+        'patient_id': 1,
+        'severity': 'danger'
+    }
+    send_patient_alert(alert)
+    return jsonify({'success': True, 'message': 'Test alert sent.'})
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=8000, use_reloader=False) 

@@ -1,84 +1,356 @@
 {
     "diabetes": {
+        "risk_factors": ["high_blood_sugar", "obesity", "family_history", "sedentary_lifestyle"],
         "goals": [
-            "Maintain blood glucose levels within target range",
-            "Achieve and maintain healthy body weight",
-            "Regular physical activity",
-            "Prevent complications",
-            "Improve quality of life"
+            {
+                "title": "Blood Glucose Control",
+                "target": "Maintain blood glucose levels within target range",
+                "frequency": "Daily",
+                "interventions": [
+                    "Regular blood glucose monitoring",
+                    "Medication adherence",
+                    "Dietary management",
+                    "Physical activity"
+                ]
+            }
         ],
         "interventions": [
-            "Daily blood glucose monitoring",
-            "Regular HbA1c testing",
-            "Nutritional counseling",
-            "Exercise program",
-            "Medication management",
-            "Foot care education",
-            "Regular eye examinations"
+            {
+                "title": "Blood Glucose Monitoring",
+                "frequency": "Daily",
+                "details": "Regular monitoring of blood glucose levels using a glucometer",
+                "equipment": "Glucometer, test strips, lancets",
+                "education": "Proper blood glucose monitoring techniques and target ranges"
+            },
+            {
+                "title": "Dietary Management",
+                "frequency": "Daily",
+                "details": "Implementation of a balanced diabetic diet with proper portion control",
+                "equipment": "Food scale, measuring cups, diabetic meal plan",
+                "education": "Carbohydrate counting, meal planning, and healthy food choices"
+            },
+            {
+                "title": "Physical Activity",
+                "frequency": "Daily",
+                "details": "Regular exercise program including aerobic and strength training",
+                "equipment": "Comfortable shoes, exercise mat, resistance bands",
+                "education": "Safe exercise guidelines and importance of regular physical activity"
+            },
+            {
+                "title": "Medication Management",
+                "frequency": "Daily",
+                "details": "Proper administration of diabetes medications and insulin if prescribed",
+                "equipment": "Insulin pen/syringes if needed, pill organizer",
+                "education": "Medication timing, storage, and administration techniques"
+            }
         ]
     },
     "hypertension": {
+        "risk_factors": ["high_blood_pressure", "family_history", "obesity", "stress"],
         "goals": [
-            "Maintain blood pressure within target range",
-            "Reduce cardiovascular risk",
-            "Improve lifestyle habits",
-            "Prevent complications"
+            {
+                "title": "Blood Pressure Control",
+                "target": "Maintain blood pressure within normal range",
+                "frequency": "Daily",
+                "interventions": [
+                    "Regular blood pressure monitoring",
+                    "Medication adherence",
+                    "Lifestyle modifications",
+                    "Stress management"
+                ]
+            }
         ],
         "interventions": [
-            "Regular blood pressure monitoring",
-            "Salt reduction",
-            "Stress management",
-            "Regular exercise",
-            "Medication adherence",
-            "Weight management",
-            "Smoking cessation support"
+            {
+                "title": "Blood Pressure Monitoring",
+                "frequency": "Daily",
+                "details": "Regular monitoring of blood pressure using a home BP monitor",
+                "equipment": "Home blood pressure monitor",
+                "education": "Proper blood pressure monitoring techniques and target ranges"
+            },
+            {
+                "title": "Lifestyle Modifications",
+                "frequency": "Daily",
+                "details": "Implementation of DASH diet and sodium restriction",
+                "equipment": "Food scale, measuring cups, DASH diet guide",
+                "education": "Dietary guidelines, portion control, and sodium awareness"
+            },
+            {
+                "title": "Physical Activity",
+                "frequency": "Daily",
+                "details": "Regular moderate-intensity exercise program",
+                "equipment": "Comfortable shoes, exercise mat",
+                "education": "Safe exercise guidelines and importance of regular activity"
+            },
+            {
+                "title": "Medication Management",
+                "frequency": "Daily",
+                "details": "Proper administration of blood pressure medications",
+                "equipment": "Pill organizer",
+                "education": "Medication timing and importance of adherence"
+            }
         ]
     },
     "heart_failure": {
+        "risk_factors": ["heart_disease", "high_blood_pressure", "diabetes", "obesity"],
         "goals": [
-            "Improve heart function",
-            "Reduce symptoms",
-            "Prevent hospitalizations",
-            "Enhance quality of life"
+            {
+                "title": "Heart Function Management",
+                "target": "Maintain stable heart function and prevent exacerbations",
+                "frequency": "Daily",
+                "interventions": [
+                    "Daily weight monitoring",
+                    "Medication adherence",
+                    "Fluid management",
+                    "Activity management"
+                ]
+            }
         ],
         "interventions": [
-            "Daily weight monitoring",
-            "Fluid restriction",
-            "Medication management",
-            "Exercise program",
-            "Dietary modifications",
-            "Regular follow-up"
+            {
+                "title": "Daily Weight Monitoring",
+                "frequency": "Daily",
+                "details": "Regular monitoring of body weight to detect fluid retention",
+                "equipment": "Digital scale",
+                "education": "Importance of daily weight monitoring and when to report changes"
+            },
+            {
+                "title": "Fluid Management",
+                "frequency": "Daily",
+                "details": "Strict fluid intake monitoring and sodium restriction",
+                "equipment": "Measuring cup, fluid intake log",
+                "education": "Fluid restriction guidelines and sodium awareness"
+            },
+            {
+                "title": "Activity Management",
+                "frequency": "Daily",
+                "details": "Balanced activity program with proper rest periods",
+                "equipment": "Pulse oximeter, activity log",
+                "education": "Energy conservation techniques and activity pacing"
+            },
+            {
+                "title": "Medication Management",
+                "frequency": "Daily",
+                "details": "Proper administration of heart failure medications",
+                "equipment": "Pill organizer",
+                "education": "Medication timing and importance of adherence"
+            }
         ]
     },
     "copd": {
+        "risk_factors": ["smoking", "air_pollution", "respiratory_infections", "age"],
         "goals": [
-            "Improve breathing capacity",
-            "Reduce exacerbations",
-            "Enhance exercise tolerance",
-            "Improve quality of life"
+            {
+                "title": "Respiratory Function",
+                "target": "Maintain optimal respiratory function and prevent exacerbations",
+                "frequency": "Daily",
+                "interventions": [
+                    "Oxygen therapy",
+                    "Breathing exercises",
+                    "Activity management",
+                    "Medication management"
+                ]
+            }
         ],
         "interventions": [
-            "Pulmonary rehabilitation",
-            "Smoking cessation",
-            "Medication management",
-            "Oxygen therapy if needed",
-            "Exercise program",
-            "Infection prevention"
+            {
+                "title": "Oxygen Therapy",
+                "frequency": "As prescribed",
+                "details": "Proper use of supplemental oxygen therapy",
+                "equipment": "Oxygen concentrator, nasal cannula",
+                "education": "Oxygen safety and proper usage techniques"
+            },
+            {
+                "title": "Breathing Exercises",
+                "frequency": "Daily",
+                "details": "Regular practice of breathing techniques and exercises",
+                "equipment": "Incentive spirometer",
+                "education": "Proper breathing techniques and exercise guidelines"
+            },
+            {
+                "title": "Activity Management",
+                "frequency": "Daily",
+                "details": "Balanced activity program with proper rest periods",
+                "equipment": "Pulse oximeter, activity log",
+                "education": "Energy conservation techniques and activity pacing"
+            },
+            {
+                "title": "Medication Management",
+                "frequency": "Daily",
+                "details": "Proper use of inhalers and other respiratory medications",
+                "equipment": "Inhaler, spacer if needed",
+                "education": "Proper inhaler technique and medication timing"
+            }
+        ]
+    },
+    "asthma": {
+        "risk_factors": ["allergies", "family_history", "respiratory_infections", "smoking"],
+        "goals": [
+            {
+                "title": "Asthma Symptom Control",
+                "target": "Achieve good control of asthma symptoms, minimize use of reliever medication",
+                "frequency": "Ongoing",
+                "interventions": [
+                    "Adherence to controller medication",
+                    "Proper inhaler technique",
+                    "Use of an asthma action plan",
+                    "Regular follow-up with healthcare provider"
+                ]
+            }
+        ],
+        "interventions": [
+            {
+                "title": "Controller Inhaler (ICS/formoterol)",
+                "frequency": "As prescribed (maintenance and reliever)",
+                "details": "Use of combination inhaled corticosteroid (ICS) and long-acting beta-agonist (LABA) like formoterol for both maintenance and relief of symptoms (MART/AIR therapy).",
+                "equipment": "ICS/formoterol combination inhaler",
+                "education": "Proper inhaler technique, understanding the roles of controller vs. reliever medication, and following a written asthma action plan."
+            },
+            {
+                "title": "Environmental Control",
+                "frequency": "Ongoing",
+                "details": "Identify and avoid triggers such as allergens (dust mites, pollen, pet dander) and irritants (smoke, strong odors).",
+                "equipment": "Air purifier, allergen-proof bedding",
+                "education": "Education on common triggers and strategies to minimize exposure."
+            },
+            {
+                "title": "Peak Flow Monitoring",
+                "frequency": "Daily, especially when symptoms change",
+                "details": "Monitor peak expiratory flow (PEF) to track lung function and identify worsening asthma.",
+                "equipment": "Peak flow meter",
+                "education": "How to use a peak flow meter and interpret the readings according to the asthma action plan."
+            }
+        ]
+    },
+    "flu": {
+        "risk_factors": ["unvaccinated", "chronic_illness", "age_extremes", "immunocompromised"],
+        "goals": [
+            {
+                "title": "Symptom Relief and Recovery",
+                "target": "Alleviate symptoms of fever, cough, and body aches, and prevent complications.",
+                "frequency": "During illness",
+                "interventions": [
+                    "Rest and hydration",
+                    "Fever and pain management",
+                    "Antiviral medication if indicated",
+                    "Monitoring for complications"
+                ]
+            }
+        ],
+        "interventions": [
+            {
+                "title": "Rest and Hydration",
+                "frequency": "Daily during illness",
+                "details": "Encourage bed rest and increased fluid intake (water, broth, juice) to prevent dehydration.",
+                "equipment": "None",
+                "education": "Importance of rest for recovery and signs of dehydration."
+            },
+            {
+                "title": "Fever and Pain Management",
+                "frequency": "As needed",
+                "details": "Use of over-the-counter medications like acetaminophen or ibuprofen to manage fever and muscle aches.",
+                "equipment": "Thermometer",
+                "education": "Appropriate dosage and timing of medications."
+            },
+            {
+                "title": "Antiviral Medication",
+                "frequency": "As prescribed (typically within 48 hours of symptom onset)",
+                "details": "Prescription antiviral drugs (e.g., oseltamivir, zanamivir) can help reduce the severity and duration of the flu.",
+                "equipment": "Prescription medication",
+                "education": "Importance of completing the full course of medication as prescribed."
+            }
+        ]
+    },
+    "constipation": {
+        "risk_factors": ["low_fiber_diet", "dehydration", "sedentary_lifestyle", "certain_medications"],
+        "goals": [
+            {
+                "title": "Promote Regular Bowel Movements",
+                "target": "Achieve regular, soft, and easy-to-pass stools without straining.",
+                "frequency": "Ongoing",
+                "interventions": [
+                    "Increase dietary fiber",
+                    "Adequate fluid intake",
+                    "Regular physical activity",
+                    "Use of laxatives as needed"
+                ]
+            }
+        ],
+        "interventions": [
+            {
+                "title": "Dietary Fiber Increase",
+                "frequency": "Daily",
+                "details": "Gradually increase intake of high-fiber foods such as fruits, vegetables, whole grains, and legumes. Fiber supplements (e.g., psyllium) can be used.",
+                "equipment": "None",
+                "education": "Information on high-fiber foods and the importance of increasing fiber slowly to avoid gas and bloating."
+            },
+            {
+                "title": "Adequate Fluid Intake",
+                "frequency": "Daily",
+                "details": "Drink plenty of water and other fluids throughout the day to help soften stool.",
+                "equipment": "None",
+                "education": "Aim for 8-10 glasses of water per day unless advised otherwise."
+            },
+            {
+                "title": "Osmotic Laxatives",
+                "frequency": "As needed or recommended by a doctor",
+                "details": "Use of osmotic laxatives like polyethylene glycol (PEG) or magnesium oxide to draw water into the colon and soften stool.",
+                "equipment": "Over-the-counter laxatives",
+                "education": "Proper use and when to consult a doctor for persistent constipation."
+            },
+            {
+                "title": "Stimulant Laxatives",
+                "frequency": "For short-term or rescue use",
+                "details": "Use of stimulant laxatives like senna or bisacodyl for occasional, short-term relief.",
+                "equipment": "Over-the-counter laxatives",
+                "education": "Not for long-term use unless directed by a doctor, as they can lead to dependency."
+            }
         ]
     },
     "default": {
+        "risk_factors": ["age", "family_history", "lifestyle_factors"],
         "goals": [
-            "Improve overall health",
-            "Manage symptoms",
-            "Prevent complications",
-            "Enhance quality of life"
+            {
+                "title": "General Health Maintenance",
+                "target": "Maintain optimal health status",
+                "frequency": "Monthly",
+                "interventions": [
+                    "Regular health check-ups",
+                    "Lifestyle assessment",
+                    "Preventive care",
+                    "Health education"
+                ]
+            }
         ],
         "interventions": [
-            "Regular monitoring",
-            "Medication management",
-            "Lifestyle modifications",
-            "Regular follow-up",
-            "Patient education"
+            {
+                "title": "Health Monitoring",
+                "frequency": "Monthly",
+                "details": "Regular health assessments including vital signs, weight, and general well-being",
+                "equipment": "Basic health monitoring tools (scale, thermometer, BP monitor if needed)",
+                "education": "Health maintenance guidelines and self-monitoring techniques"
+            },
+            {
+                "title": "Lifestyle Management",
+                "frequency": "Daily",
+                "details": "Implementation of healthy lifestyle practices including diet, exercise, and stress management",
+                "equipment": "Exercise equipment as needed, food diary, stress management tools",
+                "education": "Comprehensive lifestyle modification guidelines and behavioral change strategies"
+            },
+            {
+                "title": "Preventive Care",
+                "frequency": "Quarterly",
+                "details": "Regular preventive health screenings and vaccinations",
+                "equipment": "Screening tools as needed",
+                "education": "Preventive health guidelines and importance of regular check-ups"
+            },
+            {
+                "title": "Medication Management",
+                "frequency": "Daily",
+                "details": "Proper medication adherence and monitoring",
+                "equipment": "Pill organizer if needed",
+                "education": "Medication management guidelines and importance of adherence"
+            }
         ]
     }
 } 

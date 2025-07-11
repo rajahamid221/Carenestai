@@ -1,0 +1,120 @@
+2025-07-03 18:45:10,743 - app - ERROR - Exception on /api/test-patient-alert [GET]
+Traceback (most recent call last):
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2650, in test_patient_alert
+    send_patient_alert(alert)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2637, in send_patient_alert
+    socketio.emit('patient_alert', alert, broadcast=True)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_socketio\__init__.py", line 462, in emit
+    self.server.emit(event, *args, namespace=namespace, to=to,
+TypeError: Server.emit() got an unexpected keyword argument 'broadcast'
+2025-07-03 18:45:18,547 - app - ERROR - Exception on /api/test-patient-alert [GET]
+Traceback (most recent call last):
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2650, in test_patient_alert
+    send_patient_alert(alert)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2637, in send_patient_alert
+    socketio.emit('patient_alert', alert, broadcast=True)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_socketio\__init__.py", line 462, in emit
+    self.server.emit(event, *args, namespace=namespace, to=to,
+TypeError: Server.emit() got an unexpected keyword argument 'broadcast'
+2025-07-03 18:46:10,256 - app - ERROR - Exception on /api/test-patient-alert [GET]
+Traceback (most recent call last):
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2650, in test_patient_alert
+    send_patient_alert(alert)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2637, in send_patient_alert
+    socketio.emit('patient_alert', alert, broadcast=True)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_socketio\__init__.py", line 462, in emit
+    self.server.emit(event, *args, namespace=namespace, to=to,
+TypeError: Server.emit() got an unexpected keyword argument 'broadcast'
+2025-07-03 18:47:16,452 - app - ERROR - Exception on /api/test-patient-alert [GET]
+Traceback (most recent call last):
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2650, in test_patient_alert
+    send_patient_alert(alert)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2637, in send_patient_alert
+    socketio.emit('patient_alert', alert, broadcast=True)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_socketio\__init__.py", line 462, in emit
+    self.server.emit(event, *args, namespace=namespace, to=to,
+TypeError: Server.emit() got an unexpected keyword argument 'broadcast'
+2025-07-03 18:47:36,706 - app - ERROR - Exception on /api/test-patient-alert [GET]
+Traceback (most recent call last):
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 2190, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1486, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1484, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask\app.py", line 1469, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_login\utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2650, in test_patient_alert
+    send_patient_alert(alert)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\app.py", line 2637, in send_patient_alert
+    socketio.emit('patient_alert', alert, broadcast=True)
+  File "C:\Users\RAJAHAMID JAVED\Documents\augment-projects\Carenestai\venv\Lib\site-packages\flask_socketio\__init__.py", line 462, in emit
+    self.server.emit(event, *args, namespace=namespace, to=to,
+TypeError: Server.emit() got an unexpected keyword argument 'broadcast'

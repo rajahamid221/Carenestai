@@ -7,5 +7,5 @@ python-dotenv==1.0.0
 oauthlib==3.2.2
 requests==2.31.0
 Werkzeug==2.3.7
-SQLAlchemy==2.0.23
+SQLAlchemy==2.0.25
 eventlet==0.33.3 

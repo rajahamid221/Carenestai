@@ -439,11 +439,19 @@
                                 <input type="date" class="form-control" id="editEndDate" name="end_date" required>
                             </div>
                             <div class="col-12">
-                                <label for="editGoals" class="form-label">Goals</label>
+                                <label for="editStatus" class="form-label">Status</label>
+                                <select class="form-select" id="editStatus" name="status" required>
+                                    <option value="active">Active</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="completed">Completed</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="editGoals" class="form-label">Goals (one per line)</label>
                                 <textarea class="form-control" id="editGoals" name="goals" rows="3" required></textarea>
                             </div>
                             <div class="col-12">
-                                <label for="editInterventions" class="form-label">Interventions</label>
+                                <label for="editInterventions" class="form-label">Interventions (one per line)</label>
                                 <textarea class="form-control" id="editInterventions" name="interventions" rows="3" required></textarea>
                             </div>
                             <div class="col-12">
@@ -638,6 +646,28 @@
             });
         });
 
+        // Improved: Convert JSON array of objects to plain text (one per line, show title: target if available)
+        function jsonToPlainText(jsonStr) {
+            try {
+                const arr = JSON.parse(jsonStr);
+                if (Array.isArray(arr)) {
+                    return arr.map(item => {
+                        if (typeof item === 'string') return item;
+                        if (item.title && item.target) return `${item.title}: ${item.target}`;
+                        if (item.title) return item.title;
+                        return JSON.stringify(item);
+                    }).join('\n');
+                }
+                return jsonStr;
+            } catch (e) {
+                return jsonStr;
+            }
+        }
+        // Helper: Convert plain text (one per line) to JSON array of objects with 'title'
+        function plainTextToJson(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            return JSON.stringify(lines.map(title => ({ title })));
+        }
         // View Care Plan
         document.querySelectorAll('.view-care-plan').forEach(button => {
             button.addEventListener('click', async function() {
@@ -652,8 +682,8 @@
                     document.getElementById('viewDiagnosis').textContent = data.diagnosis;
                     document.getElementById('viewStartDate').textContent = data.start_date;
                     document.getElementById('viewEndDate').textContent = data.end_date;
-                    document.getElementById('viewGoals').textContent = data.goals;
-                    document.getElementById('viewInterventions').textContent = data.interventions;
+                    document.getElementById('viewGoals').innerHTML = displayAsListOrText(data.goals);
+                    document.getElementById('viewInterventions').innerHTML = displayAsListOrText(data.interventions);
                     document.getElementById('viewNotes').textContent = data.notes || 'No additional notes';
                     
                     // Show modal
@@ -673,18 +703,15 @@
                 try {
                     const response = await fetch(`/api/care-plan/${carePlanId}`);
                     const data = await response.json();
-                    
-                    // Populate form with care plan data
                     document.getElementById('editCarePlanId').value = carePlanId;
                     document.getElementById('editPlanTitle').value = data.title;
                     document.getElementById('editDiagnosis').value = data.diagnosis;
                     document.getElementById('editStartDate').value = data.start_date;
                     document.getElementById('editEndDate').value = data.end_date;
-                    document.getElementById('editGoals').value = data.goals;
-                    document.getElementById('editInterventions').value = data.interventions;
+                    document.getElementById('editStatus').value = data.status || 'active';
+                    document.getElementById('editGoals').value = jsonToPlainText(data.goals);
+                    document.getElementById('editInterventions').value = jsonToPlainText(data.interventions);
                     document.getElementById('editNotes').value = data.notes || '';
-                    
-                    // Show modal
                     const modal = new bootstrap.Modal(document.getElementById('editCarePlanModal'));
                     modal.show();
                 } catch (error) {
@@ -745,10 +772,11 @@
         // Handle edit form submission
         document.getElementById('editCarePlanForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const formData = new FormData(this);
+            // Convert plain text to JSON for goals/interventions
+            formData.set('goals', plainTextToJson(formData.get('goals')));
+            formData.set('interventions', plainTextToJson(formData.get('interventions')));
             const carePlanId = document.getElementById('editCarePlanId').value;
-            
             try {
                 const response = await fetch(`/api/care-plan/${carePlanId}`, {
                     method: 'PUT',
@@ -757,24 +785,14 @@
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 });
-                
                 const data = await response.json();
-                
                 if (data.success) {
-                    // Close modal
                     const modal = bootstrap.Modal.getInstance(document.getElementById('editCarePlanModal'));
                     modal.hide();
-                    
-                    // Show success message and refresh page
                     const alertDiv = document.createElement('div');
                     alertDiv.className = 'alert alert-success alert-dismissible fade show';
-                    alertDiv.innerHTML = `
-                        Care plan updated successfully
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    `;
+                    alertDiv.innerHTML = `Care plan updated successfully<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>`;
                     document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.content-card'));
-                    
-                    // Refresh the page after a short delay
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     throw new Error(data.message);
@@ -945,7 +963,17 @@
                     body: JSON.stringify({ patient_id, diagnosis, vital_signs })
                 });
                 const data = await resp.json();
-                if (data.success) {
+                if (data.success && data.already_exists) {
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'alert alert-info';
+                    resultDiv.innerText = data.message || 'This care plan already exists and has already been saved.';
+                    // Close the modal and redirect after a short delay
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('aiCarePlanModal'));
+                        if (modal) modal.hide();
+                        window.location.href = '/care-plans';
+                    }, 1200);
+                } else if (data.success) {
                     resultDiv.style.display = 'block';
                     resultDiv.className = 'alert alert-success';
                     resultDiv.innerHTML = `
@@ -963,11 +991,20 @@
                         <strong>Notes:</strong><br>
                         <pre>${data.care_plan.notes}</pre>
                         <div class="mt-3">
-                            <button class="btn btn-primary" onclick="saveAICarePlan(${JSON.stringify(data.care_plan).replace(/"/g, '&quot;')})">
+                            <button id="saveAICarePlanBtn" class="btn btn-primary">
                                 <i class="bi bi-save"></i> Save to System
                             </button>
                         </div>
                     `;
+
+                    // Add event listener to the newly created button
+                    const saveAICarePlanBtn = document.getElementById('saveAICarePlanBtn');
+                    if (saveAICarePlanBtn) {
+                        saveAICarePlanBtn.addEventListener('click', async () => {
+                            await saveAICarePlan(data.care_plan);
+                        });
+                    }
+
                 } else {
                     resultDiv.style.display = 'block';
                     resultDiv.className = 'alert alert-danger';
@@ -981,7 +1018,28 @@
         });
 
         async function saveAICarePlan(carePlan) {
+            const saveBtn = document.querySelector('#aiCarePlanResult .btn-primary');
+            if (saveBtn.disabled) return; // Prevent double click
+            saveBtn.disabled = true;
+            const originalHTML = saveBtn.innerHTML;
+            saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Saving...';
+
             try {
+                // Duplicate check before saving (case-insensitive, trimmed)
+                const patientId = document.getElementById('aiPatientSelect').value;
+                const checkResp = await fetch(`/api/patient/${patientId}/care-plans`);
+                const existingPlans = await checkResp.json();
+                const newTitle = (carePlan.title || '').trim().toLowerCase();
+                if (existingPlans.some(plan => (plan.title || '').trim().toLowerCase() === newTitle)) {
+                    const resultDiv = document.getElementById('aiCarePlanResult');
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'alert alert-info';
+                    resultDiv.innerText = 'A care plan with this title already exists for this patient and has already been saved.';
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = originalHTML;
+                    return;
+                }
+
                 const formData = new FormData();
                 formData.append('patient_id', document.getElementById('aiPatientSelect').value);
                 formData.append('title', carePlan.title);
@@ -1020,11 +1078,36 @@
                     // Refresh the page after a short delay
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
+                    // Show error message in the modal
+                    const resultDiv = document.getElementById('aiCarePlanResult');
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'alert alert-danger';
+                    resultDiv.innerHTML = data.message || 'Failed to save care plan';
                     throw new Error(data.message || 'Failed to save care plan');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Failed to save care plan: ' + error.message);
+                // Show error message in the modal
+                const resultDiv = document.getElementById('aiCarePlanResult');
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = error.message || 'Failed to save care plan';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = originalHTML;
+            }
+        }
+
+        // View Care Plan Modal: show goals/interventions as bullet points if JSON
+        function displayAsListOrText(val) {
+            try {
+                const arr = JSON.parse(val);
+                if (Array.isArray(arr)) {
+                    return '<ul>' + arr.map(item => `<li>${item.title ? item.title : JSON.stringify(item)}</li>`).join('') + '</ul>';
+                }
+                return val;
+            } catch (e) {
+                return val;
             }
         }
     </script>
